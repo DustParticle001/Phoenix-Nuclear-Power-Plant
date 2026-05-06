@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PWR Backend API Tester</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Courier New', monospace;
+            background: #0d1117;
+            color: #c9d1d9;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        .panel {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 20px;
+        }
+        
+        h1 {
+            grid-column: 1 / -1;
+            margin-bottom: 20px;
+            font-size: 24px;
+        }
+        
+        h2 {
+            font-size: 16px;
+            margin-bottom: 15px;
+            color: #58a6ff;
+            border-bottom: 1px solid #30363d;
+            padding-bottom: 10px;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 12px;
+            color: #8b949e;
+        }
+        
+        input, textarea, select {
+            width: 100%;
+            padding: 8px;
+            background: #0d1117;
+            border: 1px solid #30363d;
+            color: #c9d1d9;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+        
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: #58a6ff;
+        }
+        
+        button {
+            background: #238636;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+            font-family: 'Courier New', monospace;
+            width: 100%;
+            transition: background 0.2s;
+        }
+        
+        button:hover {
+            background: #2ea043;
+        }
+        
+        button:active {
+            background: #1f6feb;
+        }
+        
+        .response {
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 3px;
+            padding: 10px;
+            margin-top: 10px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-size: 11px;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        
+        .response.success {
+            border-color: #238636;
+            color: #3fb950;
+        }
+        
+        .response.error {
+            border-color: #da3633;
+            color: #f85149;
+        }
+        
+        .response.info {
+            border-color: #58a6ff;
+            color: #79c0ff;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .connected {
+            background: #3fb950;
+        }
+        
+        .disconnected {
+            background: #f85149;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔴 PWR Backend API Tester</h1>
+        
+        <!-- REST API Panel -->
+        <div class="panel">
+            <h2>REST API</h2>
+            
+            <div class="form-group">
+                <label>Server URL</label>
+                <input type="text" id="serverUrl" value="http://localhost:8080" placeholder="http://localhost:8080">
+            </div>
+            
+            <div class="form-group">
+                <button onclick="testStatus()">GET /api/reactor/status</button>
+                <div class="response" id="statusResponse"></div>
+            </div>
+            
+            <div class="form-group">
+                <label>Control Command</label>
+                <input type="text" id="controlCommand" placeholder='{"action": "start"}' value='{"action": "start"}'>
+                <button onclick="testControl()">POST /api/reactor/control</button>
+                <div class="response" id="controlResponse"></div>
+            </div>
+        </div>
+        
+        <!-- WebSocket Panel -->
+        <div class="panel">
+            <h2>WebSocket</h2>
+            <div class="response info" style="margin-top: 0; border-color: #f85149;">⚠️ Not yet implemented on backend</div>
+        </div>
+    </div>
+    
+    <script>
+        function getServerUrl() {
+            return document.getElementById('serverUrl').value;
+        }
+        
+        async function testStatus() {
+            const respEl = document.getElementById('statusResponse');
+            try {
+                const url = `${getServerUrl()}/api/reactor/status`;
+                respEl.textContent = `Fetching ${url}...`;
+                respEl.className = 'response info';
+                
+                const res = await fetch(url);
+                const data = await res.json();
+                
+                respEl.textContent = JSON.stringify(data, null, 2);
+                respEl.className = res.ok ? 'response success' : 'response error';
+            } catch (e) {
+                respEl.textContent = `Error: ${e.message}`;
+                respEl.className = 'response error';
+            }
+        }
+        
+        async function testControl() {
+            const respEl = document.getElementById('controlResponse');
+            const cmdInput = document.getElementById('controlCommand');
+            try {
+                const url = `${getServerUrl()}/api/reactor/control`;
+                const payload = JSON.parse(cmdInput.value);
+                
+                respEl.textContent = `Posting to ${url}...`;
+                respEl.className = 'response info';
+                
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.text();
+                
+                respEl.textContent = data;
+                respEl.className = res.ok ? 'response success' : 'response error';
+            } catch (e) {
+                respEl.textContent = `Error: ${e.message}`;
+                respEl.className = 'response error';
+            }
+        }
+    </script>
+</body>
+</html>
