@@ -1,5 +1,5 @@
 # Phoenix-Nuclear-Power-Plant
-A PWR nuclear reactor game based on the US-EPR type. 2 people developing currently.'
+A PWR nuclear reactor game based on the US-EPR type. 2 people developing currently.
 
 ## Description
 Yet to be written.
