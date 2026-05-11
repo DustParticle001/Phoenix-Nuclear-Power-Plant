@@ -14,7 +14,7 @@ The discord server is being built but the link will be <a href="https://google.c
 ## Unity
 ### Unity Project Structure
 ```
-client/
+client/unbuilt/
 ├── Assets/
 │   └── ...                       # Way too much stuff
 ├── Packages/
