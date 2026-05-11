@@ -1,3 +1,4 @@
+# NOTICE: This readme already implemented in the final README.md!
 # PWR Simulation Backend
 
 Java Spring Boot backend for Unity PWR (Pressurized Water Reactor) simulation game.
