@@ -1,0 +1,80 @@
+{
+  "schemaVersion": 1,
+  "system": "RCS",
+  "unit": "SG",
+  "name": "Steam Generator (primary side only - secondary deferred)",
+  "instances": ["SG1", "SG2", "SG3", "SG4"],
+  "instanceParams": {
+    "SG1": { "loop": 1 },
+    "SG2": { "loop": 2 },
+    "SG3": { "loop": 3 },
+    "SG4": { "loop": 4 }
+  },
+  "notes": "US EPR FSAR Ch 5.4-derived; numerics approx. SCOPE decided 2026-07-10: primary side only (channel-head plena + tube bundle) so the reactor-SG-RCP-reactor loop is closed. The whole secondary side (shell, level/pressure, FW/EFW nozzles, MSSVs, MSRT, MSIV, blowdown, N16 monitor) is DEFERRED and will be added to this file later - modeled here only as the external:SG{n}-SEC heat sink. Tube bundle lives here (not loop.json) so the SGTR primary-to-secondary coupling stays in one file. MSSVs will be modeled as separate devices (2 per line + 1 MSRT), decided 2026-07-10.",
+
+  "devices": [
+    {
+      "id": "SG{n}-PRI-IN",
+      "name": "SG {n} inlet plenum (hot channel head)",
+      "kind": "other",
+      "location": "containment",
+      "visibility": "hidden",
+      "states": ["intact", "leak"],
+      "initialState": "intact",
+      "actuation": ["auto"],
+      "behavior": "Hot-side channel head: receives full loop flow from RCS{n}-HL and distributes it into the tube bundle. Divided from the outlet plenum by the partition plate. 'leak' = primary leak inside containment (e.g. manway) - casualty state.",
+      "params": { "approx": true }
+    },
+    {
+      "id": "SG{n}-TUBES",
+      "name": "SG {n} U-tube bundle",
+      "kind": "heat-exchanger",
+      "location": "containment",
+      "visibility": "hidden",
+      "states": ["ok", "leak", "rupture"],
+      "initialState": "ok",
+      "actuation": ["auto"],
+      "behavior": "Inverted U-tube bundle: primary water flows up and back down inside the tubes, boiling secondary water on the shell side. THE primary/secondary boundary. 'leak' = small primary-to-secondary leakage (within tech-spec limits, slow secondary activity rise); 'rupture' = SGTR: one or more tubes severed, primary inventory blows into the secondary at full RCS-to-SG dP. Heat transfer scales with primary flow, primary-secondary dT, and tube condition. Secondary-side detection (N16, activity) arrives with the deferred secondary model.",
+      "params": { "tubeCount": 5980, "heatDutyMWt": 1125, "designPressurePrimaryBar": 176, "approx": true }
+    },
+    {
+      "id": "SG{n}-PRI-OUT",
+      "name": "SG {n} outlet plenum (cold channel head)",
+      "kind": "other",
+      "location": "containment",
+      "visibility": "hidden",
+      "states": ["intact", "leak"],
+      "initialState": "intact",
+      "actuation": ["auto"],
+      "behavior": "Cold-side channel head: collects tube-bundle discharge and delivers it to the crossover leg RCS{n}-XL toward RCP{n} suction.",
+      "params": { "approx": true }
+    }
+  ],
+
+  "signals": [],
+
+  "logic": {
+    "permissives": [],
+    "autoActions": [],
+    "sequences": []
+  },
+
+  "mcr": {
+    "sics": [],
+    "pics": []
+  },
+
+  "links": [
+    { "from": "external:RCS{n}-HL", "to": "SG{n}-PRI-IN", "type": "fluid", "medium": "water", "notes": "hot leg termination - see rcs/loop.json" },
+    { "from": "SG{n}-PRI-IN", "to": "SG{n}-TUBES", "type": "fluid", "medium": "water" },
+    { "from": "SG{n}-TUBES", "to": "SG{n}-PRI-OUT", "type": "fluid", "medium": "water" },
+    { "from": "SG{n}-PRI-OUT", "to": "external:RCS{n}-XL", "type": "fluid", "medium": "water", "notes": "to crossover leg / RCP{n} suction - see rcs/loop.json" },
+    { "from": "external:SG{n}-SEC", "to": "SG{n}-TUBES", "type": "cooling", "notes": "secondary side boils off primary heat - DEFERRED, placeholder boundary until the secondary model lands in this file" },
+    { "from": "SG{n}-TUBES", "to": "external:SG{n}-SEC", "type": "fluid", "medium": "water", "notes": "SGTR leak path: active only in 'leak'/'rupture' states, primary water into the secondary shell" }
+  ],
+
+  "dependencies": [
+    { "system": "RCS", "interface": "loop piping: RCS{n}-HL into inlet plenum, outlet plenum into RCS{n}-XL", "signals": [], "notes": "rcs/loop.json (same system, separate unit file)." },
+    { "system": "SG-SEC", "interface": "secondary side of this same SG: shell heat sink, SGTR receiving volume", "signals": [], "notes": "Deferred - will be absorbed into this file, not a separate system. Until then external:SG{n}-SEC is an ideal heat sink." }
+  ]
+}
