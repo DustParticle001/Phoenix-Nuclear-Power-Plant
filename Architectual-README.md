@@ -1,4 +1,5 @@
------
+# Architectual README
+Information about the client and backend.
 
 ## Unity
 ### Unity Project Structure
