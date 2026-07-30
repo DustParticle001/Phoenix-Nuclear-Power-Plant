@@ -28,13 +28,15 @@ public class GaugeNeedle : MonoBehaviour
     public float Value { get; private set; }
 
     private Quaternion _zeroRotation;
-    private Quaternion _targetRotation;
+    private float _currentAngle;
+    private float _targetAngle;
 
     private void Awake()
     {
         _zeroRotation = _needle.localRotation;
         SetValue(_definition != null ? _definition.minValue : 0f);
-        _needle.localRotation = _targetRotation;
+        _currentAngle = _targetAngle;
+        Apply();
     }
 
     private void Update()
@@ -42,8 +44,12 @@ public class GaugeNeedle : MonoBehaviour
         if (_useTestValue)
             SetValue(_testValue);
 
-        _needle.localRotation = Quaternion.Lerp(
-            _needle.localRotation, _targetRotation, Time.deltaTime * _speed);
+        // Interpolate the angle, not the rotation: quaternion lerp takes the
+        // shortest arc, which on swings wider than 180 deg cuts through the
+        // bottom of the dial — outside the scale. The scalar angle always
+        // stays within the sweep.
+        _currentAngle = Mathf.Lerp(_currentAngle, _targetAngle, Time.deltaTime * _speed);
+        Apply();
     }
 
     public void SetValue(float value)
@@ -52,7 +58,9 @@ public class GaugeNeedle : MonoBehaviour
             ? Mathf.Clamp(value, _definition.minValue, _definition.maxValue)
             : value;
 
-        float angle = _definition != null ? _definition.ValueToAngle(Value) : 0f;
-        _targetRotation = _zeroRotation * Quaternion.AngleAxis(angle, _rotationAxis);
+        _targetAngle = _definition != null ? _definition.ValueToAngle(Value) : 0f;
     }
+
+    private void Apply() =>
+        _needle.localRotation = _zeroRotation * Quaternion.AngleAxis(_currentAngle, _rotationAxis);
 }

@@ -12,6 +12,10 @@ public class Rot2p : MonoBehaviour
     [Header("Parts")]
     [SerializeField] private Transform _handle;
 
+    [Header("State")]
+    [Tooltip("State the switch starts in on scene load.")]
+    [SerializeField] private bool _defaultOn = false;
+
     [Header("Interaction")]
     [SerializeField] private SplitAxis _splitAxis = SplitAxis.X;
     [SerializeField] private bool _invertSides = false;
@@ -28,7 +32,10 @@ public class Rot2p : MonoBehaviour
 
     private void Awake()
     {
-        _targetRotation = Quaternion.Euler(_offRotation);
+        // Set directly (not via SetState) so scene load doesn't fire
+        // OnStateChanged before listeners have subscribed.
+        IsOn = _defaultOn;
+        _targetRotation = Quaternion.Euler(IsOn ? _onRotation : _offRotation);
         _handle.localRotation = _targetRotation;
     }
 

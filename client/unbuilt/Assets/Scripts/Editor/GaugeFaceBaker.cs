@@ -93,7 +93,8 @@ public static class GaugeFaceBaker
         }
         if (def.drawDisplayName)
             DrawString(text, font, def.displayName, textPx, center + new Vector2(0f, 0.30f * radius), textColor);
-        DrawString(text, font, def.units, textPx, center + new Vector2(0f, -0.30f * radius), textColor);
+        // Units sit 2x their own size below the name's mirror position, clear of the needle hub.
+        DrawString(text, font, def.units, textPx, center + new Vector2(0f, -(0.30f + 2f * def.textSize) * radius), textColor);
 
         // --- Render both meshes into a RenderTexture and read back ---
         var colorMat = new Material(Shader.Find("Hidden/Internal-Colored")) { hideFlags = HideFlags.HideAndDontSave };
@@ -129,6 +130,37 @@ public static class GaugeFaceBaker
         baked.Apply();
         RenderTexture.active = prevActive;
 
+        // The CommandBuffer render reads back vertically flipped (render-
+        // target convention on D3D); mirror the rows back, then add the
+        // definition's UV-compensation turn (quarter turns, counter-clockwise).
+        Color32[] src = baked.GetPixels32();
+        var pixels = new Color32[src.Length];
+        for (int y = 0; y < size; y++)
+            System.Array.Copy(src, (size - 1 - y) * size, pixels, y * size, size);
+
+        int quarters = def.bakeRotation switch
+        {
+            GaugeDefinition.FaceRotation.CCW90 => 1,
+            GaugeDefinition.FaceRotation.CW180 => 2,
+            GaugeDefinition.FaceRotation.CW90  => 3,
+            _                                  => 0
+        };
+        if (quarters != 0)
+        {
+            var rotated = new Color32[pixels.Length];
+            for (int y = 0; y < size; y++)
+                for (int x = 0; x < size; x++)
+                    rotated[y * size + x] = quarters switch
+                    {
+                        1 => pixels[(size - 1 - x) * size + y],
+                        2 => pixels[(size - 1 - y) * size + (size - 1 - x)],
+                        _ => pixels[x * size + (size - 1 - y)]
+                    };
+            pixels = rotated;
+        }
+        baked.SetPixels32(pixels);
+        baked.Apply();
+
         byte[] png = baked.EncodeToPNG();
 
         Object.DestroyImmediate(geoMesh);
@@ -160,7 +192,10 @@ public static class GaugeFaceBaker
             AssetDatabase.CreateAsset(mat, matPath);
         }
         mat.SetTexture("_BaseColorMap", faceTex);
-        mat.SetFloat("_Smoothness", 0.25f);
+        mat.SetTextureScale("_BaseColorMap", def.materialTiling);
+        mat.SetTextureOffset("_BaseColorMap", def.materialOffset);
+        mat.SetFloat("_Metallic", 0.25f);
+        mat.SetFloat("_Smoothness", 0.9f);
         HDMaterial.ValidateMaterial(mat);
         EditorUtility.SetDirty(mat);
 

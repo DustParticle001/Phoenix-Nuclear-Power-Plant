@@ -12,6 +12,10 @@ public class Rot3p : MonoBehaviour
     [Header("Parts")]
     [SerializeField] private Transform _handle;
 
+    [Header("State")]
+    [Tooltip("Position the switch starts in on scene load.")]
+    [SerializeField] private SwitchPosition _defaultPosition = SwitchPosition.Center;
+
     [Header("Interaction")]
     [SerializeField] private SplitAxis _splitAxis = SplitAxis.X;
     [SerializeField] private bool _invertSides = false;
@@ -29,7 +33,10 @@ public class Rot3p : MonoBehaviour
 
     private void Awake()
     {
-        _targetRotation = Quaternion.Euler(_centerRotation);
+        // Set directly (not via SetPosition) so scene load doesn't fire
+        // OnPositionChanged before listeners have subscribed.
+        CurrentPosition = _defaultPosition;
+        _targetRotation = RotationFor(CurrentPosition);
         _handle.localRotation = _targetRotation;
     }
 
@@ -70,14 +77,16 @@ public class Rot3p : MonoBehaviour
     public void SetPosition(SwitchPosition pos)
     {
         CurrentPosition = pos;
-        _targetRotation = pos switch
-        {
-            SwitchPosition.Left   => Quaternion.Euler(_leftRotation),
-            SwitchPosition.Center => Quaternion.Euler(_centerRotation),
-            SwitchPosition.Right  => Quaternion.Euler(_rightRotation),
-            _                     => Quaternion.Euler(_centerRotation)
-        };
+        _targetRotation = RotationFor(pos);
         OnPositionChanged?.Invoke(CurrentPosition);
         Debug.Log($"[Switch {Id}] → {CurrentPosition}");
     }
+
+    private Quaternion RotationFor(SwitchPosition pos) => pos switch
+    {
+        SwitchPosition.Left   => Quaternion.Euler(_leftRotation),
+        SwitchPosition.Center => Quaternion.Euler(_centerRotation),
+        SwitchPosition.Right  => Quaternion.Euler(_rightRotation),
+        _                     => Quaternion.Euler(_centerRotation)
+    };
 }

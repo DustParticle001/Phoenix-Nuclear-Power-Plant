@@ -20,6 +20,8 @@ public class GaugeDefinition : ScriptableObject
         public Color color;
     }
 
+    public enum FaceRotation { None, CW90, CW180, CCW90 }
+
     [Header("Identity")]
     [SerializeField] private string _id;
     public string Id => _id;
@@ -72,8 +74,15 @@ public class GaugeDefinition : ScriptableObject
     [Tooltip("Print the display name on the upper half of the face.")]
     public bool drawDisplayName = true;
 
-    [Header("Baked Output (set by the baker)")]
+    [Header("Baking")]
     public int bakeResolution = 1024;
+    [Tooltip("Rotate the baked image to match the face mesh's UV orientation. Preview and PNG show the rotated result.")]
+    public FaceRotation bakeRotation = FaceRotation.CCW90;
+    [Tooltip("Tiling/offset applied to the generated material — compensates the face mesh's UV mapping, like Bake Rotation.")]
+    public Vector2 materialTiling = new Vector2(0.15f, 0.15f);
+    public Vector2 materialOffset = new Vector2(0.5f, 0.5f);
+
+    [Header("Baked Output (set by the baker)")]
     public Texture2D bakedFace;
     public Material bakedFaceMaterial;
 

@@ -26,6 +26,9 @@ public class SwitchLampIndicator : MonoBehaviour
 
     private Rot2p _switch;
 
+    // The lamp meshes use two material slots; the lens colour is slot 1.
+    private const int LampMaterialIndex = 1;
+
     // Editor-only: runs when the component is first added (or Reset is clicked).
     private void Reset()
     {
@@ -68,9 +71,33 @@ public class SwitchLampIndicator : MonoBehaviour
         }
 
         if (_redUnlit == null && _redMesh != null)
-            _redUnlit = _redMesh.sharedMaterial;
+            _redUnlit = GetLampMaterial(_redMesh);
         if (_greenUnlit == null && _greenMesh != null)
-            _greenUnlit = _greenMesh.sharedMaterial;
+            _greenUnlit = GetLampMaterial(_greenMesh);
+    }
+
+    private Material GetLampMaterial(MeshRenderer renderer)
+    {
+        var materials = renderer.sharedMaterials;
+        return materials.Length > LampMaterialIndex ? materials[LampMaterialIndex] : null;
+    }
+
+    private void SetLampMaterial(MeshRenderer renderer, Material material)
+    {
+        if (material == null)
+            return;
+
+        var materials = renderer.sharedMaterials;
+        if (materials.Length <= LampMaterialIndex)
+        {
+            Debug.LogWarning(
+                $"[SwitchLampIndicator] '{renderer.name}' has {materials.Length} material slot(s); " +
+                $"expected at least {LampMaterialIndex + 1}.");
+            return;
+        }
+
+        materials[LampMaterialIndex] = material;
+        renderer.sharedMaterials = materials;
     }
 
     private Rot2p FindSwitch()
@@ -90,8 +117,8 @@ public class SwitchLampIndicator : MonoBehaviour
         bool redLit = _invertColors ? !isOn : isOn;
 
         if (_redMesh != null)
-            _redMesh.sharedMaterial = redLit ? _redLit : _redUnlit;
+            SetLampMaterial(_redMesh, redLit ? _redLit : _redUnlit);
         if (_greenMesh != null)
-            _greenMesh.sharedMaterial = redLit ? _greenUnlit : _greenLit;
+            SetLampMaterial(_greenMesh, redLit ? _greenUnlit : _greenLit);
     }
 }
