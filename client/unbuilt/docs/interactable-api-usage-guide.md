@@ -27,6 +27,26 @@ Instructions on adding a new interactable
 
 API for different switch controllers
 
+### Making a new controller sync with the server
+
+Implement `ISwitchControl` (Assets/Scripts/Switch Handlers/ISwitchControl.cs) and
+`IoSync` picks the switch up automatically — no registration anywhere:
+
+```csharp
+public class MyController : MonoBehaviour, ISwitchControl
+{
+    public SwitchDefinition Definition => _definition;          // usually already there
+    public string Id => _definition != null ? _definition.Id : "unassigned";
+    public string[] Positions => _positionNames;                // e.g. { "off", "on" }
+    public string Position => /* which one it's in now */;
+    public void SetPosition(string position) { /* move it, or warn */ }
+}
+```
+
+Position names are the wire format for that switch, so keep them lowercase and
+stable — renaming one renames it in the server's I/O map too. See
+`docs/server-io-sync.md`.
+
 ## Gauges (GaugeDefinition + baked dial faces)
 
 Dial faces are **baked to a texture from data** — no decals. A `GaugeDefinition` describes the scale (range, ticks, color bands, sweep); the baker generates `<name>_Face.png` + an HDRP/Lit `<name>_Face.mat` next to the definition and links them into it. `GaugeNeedle` maps values through the same definition, so needle and markings always agree.

@@ -1,0 +1,180 @@
+{
+
+
+
+  "NO ONE FREAKING CARES ABOUT THIS": "ITS NOT U1 ITS U2",
+
+
+
+
+  "templateVersion": 1,
+  "generatedBy": "server-python",
+  "plant": {
+    "id": "pnpp-unit-1",
+    "name": "Phoenix Nuclear Power Plant",
+    "unit": 1,
+    "reactorType": "PWR",
+    "scene": "MainScene"
+  },
+  "panels": [
+    {
+      "id": "MCR",
+      "name": "Main Control Room",
+      "description": "Root panel - everything not yet split out sits here."
+    },
+    {
+      "id": "SICS",
+      "name": "Safety Information and Control System",
+      "description": "Hardwired backup panel."
+    },
+    {
+      "id": "RCP",
+      "name": "Reactor Coolant Pumps",
+      "description": "Pump power, speed and seal instrumentation."
+    }
+  ],
+  "switches": [
+    {
+      "id": "RCP_1_POWER",
+      "definitionId": "ff27d4bc-1f3d-480b-9189-fa683dfd6b72",
+      "name": "RCP 1 Power",
+      "panelId": "RCP",
+      "controller": "Rot2p",
+      "positions": [
+        "off",
+        "on"
+      ],
+      "position": "off",
+      "powered": true,
+      "available": true,
+      "indicatorState": "green"
+    },
+    {
+      "id": "RCP_2_POWER",
+      "definitionId": "ec026435-4b00-47e0-af59-5c69ec5e574c",
+      "name": "RCP 2 Power",
+      "panelId": "RCP",
+      "controller": "Rot2p",
+      "positions": [
+        "off",
+        "on"
+      ],
+      "position": "off",
+      "powered": true,
+      "available": true,
+      "indicatorState": "green"
+    },
+    {
+      "id": "CVCS_CHARGING_PUMP_1",
+      "definitionId": "",
+      "name": "CVCS Charging Pump 1",
+      "panelId": "MCR",
+      "controller": "Rot3p",
+      "positions": [
+        "stop",
+        "auto",
+        "start"
+      ],
+      "position": "auto",
+      "powered": true,
+      "available": false,
+      "indicatorState": "off"
+    }
+  ],
+  "annunciators": [
+    {
+      "id": "ANN_RCP_1_TRIP",
+      "name": "RCP 1 TRIP",
+      "panelId": "SICS",
+      "text": "RCP 1 TRIP",
+      "row": 1,
+      "column": 1,
+      "priority": 1,
+      "state": "clear",
+      "flashing": false,
+      "acknowledged": false,
+      "color": "red"
+    },
+    {
+      "id": "ANN_RCS_PRESS_LOW",
+      "name": "RCS Pressure Low",
+      "panelId": "SICS",
+      "text": "RCS PRESS LO",
+      "row": 1,
+      "column": 2,
+      "priority": 1,
+      "state": "clear",
+      "flashing": false,
+      "acknowledged": false,
+      "color": "red"
+    },
+    {
+      "id": "ANN_SG_1_LEVEL_HI",
+      "name": "SG 1 Level High",
+      "panelId": "SICS",
+      "text": "SG 1 LEVEL HI",
+      "row": 2,
+      "column": 1,
+      "priority": 2,
+      "state": "clear",
+      "flashing": false,
+      "acknowledged": false,
+      "color": "amber"
+    }
+  ],
+  "gauges": [
+    {
+      "id": "RCP_1_HZ",
+      "definitionId": "ba6c1b83-fd01-4cd7-bcc5-402654aee148",
+      "name": "RCP 1 Speed",
+      "panelId": "RCP",
+      "units": "Hz",
+      "minValue": 0.0,
+      "maxValue": 80.0,
+      "value": 0.0,
+      "valid": true
+    },
+    {
+      "id": "RCS_PRESSURE",
+      "definitionId": "",
+      "name": "RCS Pressure",
+      "panelId": "SICS",
+      "units": "bar",
+      "minValue": 0.0,
+      "maxValue": 200.0,
+      "value": 155.0,
+      "valid": true
+    },
+    {
+      "id": "SG_1_LEVEL",
+      "definitionId": "",
+      "name": "SG 1 Level",
+      "panelId": "SICS",
+      "units": "%",
+      "minValue": 0.0,
+      "maxValue": 100.0,
+      "value": 50.0,
+      "valid": true
+    }
+  ],
+  "breakers": [
+    {
+      "id": "BKR_10BBA01",
+      "name": "10BBA01 RCP 1 Feeder",
+      "panelId": "RCP",
+      "switchState": "open",
+      "indicatorState": "green",
+      "powered": true,
+      "available": true
+    },
+    {
+      "id": "BKR_10BBA02",
+      "name": "10BBA02 RCP 2 Feeder",
+      "panelId": "RCP",
+      "switchState": "open",
+      "indicatorState": "green",
+      "powered": true,
+      "available": true
+    }
+  ]
+}

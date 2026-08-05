@@ -1,0 +1,111 @@
+{
+  "_readme": [
+    "Live control-room I/O, keyed by the Unity definition UID (SwitchDefinition /",
+    "GaugeDefinition -> Inspector -> three dots -> Generate New ID).",
+    "switches:   inputs - the client reports the position it is in.",
+    "indicators: outputs - lamp state on a switch, keyed by that SWITCH's uid.",
+    "gauges:     outputs - the server sets the value, the client's needle follows.",
+    "Entry shapes (see API.md for the full field list):",
+    "  switch    {\"uid\": \"...\", \"id\": \"RCP_1_POWER\", \"name\": \"RCP 1 Power\", \"positions\": [\"off\", \"on\"], \"position\": \"off\", \"powered\": true, \"available\": true}",
+    "  indicator {\"uid\": \"...\", \"id\": \"RCP_1_LAMP\", \"name\": \"RCP 1 Lamp\", \"state\": \"green\", \"flashing\": false}",
+    "  gauge     {\"uid\": \"...\", \"id\": \"RCP_1_HZ\", \"name\": \"RCP 1 Speed\", \"units\": \"Hz\", \"minValue\": 0.0, \"maxValue\": 80.0, \"value\": 0.0, \"valid\": true}",
+    "With autoRegisterFromClients on, switches the client reports but this file",
+    "doesn't have are added here automatically (the file is rewritten)."
+  ],
+  "ioVersion": 1,
+  "reportIntervalSeconds": 0.2,
+  "autoRegisterFromClients": true,
+  "switches": [
+    {
+      "uid": "ec026435-4b00-47e0-af59-5c69ec5e574c",
+      "id": "RCP 2 Power",
+      "name": "RCP 2 Power",
+      "positions": [
+        "off",
+        "on"
+      ],
+      "position": "off",
+      "powered": true,
+      "available": true
+    },
+    {
+      "uid": "ca327d3d-c283-43d7-8801-1bd7845cf3c4",
+      "id": "RCP 3 Power",
+      "name": "RCP 3 Power",
+      "positions": [
+        "off",
+        "on"
+      ],
+      "position": "off",
+      "powered": true,
+      "available": true
+    },
+    {
+      "uid": "b9a7d998-f202-47f3-9848-3b0c489fd103",
+      "id": "RCP 4 Power",
+      "name": "RCP 4 Power",
+      "positions": [
+        "off",
+        "on"
+      ],
+      "position": "off",
+      "powered": true,
+      "available": true
+    },
+    {
+      "uid": "ff27d4bc-1f3d-480b-9189-fa683dfd6b72",
+      "id": "RCP 1 Power",
+      "name": "RCP 1 Power",
+      "positions": [
+        "off",
+        "on"
+      ],
+      "position": "off",
+      "powered": true,
+      "available": true
+    }
+  ],
+  "indicators": [],
+  "gauges": [
+    {
+      "uid": "ba6c1b83-fd01-4cd7-bcc5-402654aee148",
+      "id": "RCP 1 Freq",
+      "name": "RCP 1 Freq",
+      "units": "Hz",
+      "minValue": 0.0,
+      "maxValue": 80.0,
+      "value": 0.0,
+      "valid": true
+    },
+    {
+      "uid": "370a8be9-2094-4bc8-ab74-5150b560a7f9",
+      "id": "RCP 2 Freq",
+      "name": "RCP 2 Freq",
+      "units": "Hz",
+      "minValue": 0.0,
+      "maxValue": 80.0,
+      "value": 0.0,
+      "valid": true
+    },
+    {
+      "uid": "69418421-717f-4e20-a947-5b3fc91de638",
+      "id": "RCP 3 Freq",
+      "name": "RCP 3 Freq",
+      "units": "Hz",
+      "minValue": 0.0,
+      "maxValue": 80.0,
+      "value": 0.0,
+      "valid": true
+    },
+    {
+      "uid": "5ca2be2d-df54-42e4-b17f-c3bf59975443",
+      "id": "RCP 4 Freq",
+      "name": "RCP 4 Freq",
+      "units": "Hz",
+      "minValue": 0.0,
+      "maxValue": 80.0,
+      "value": 0.0,
+      "valid": true
+    }
+  ]
+}

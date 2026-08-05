@@ -1,8 +1,11 @@
 using UnityEngine;
 
-public class Rot2p : MonoBehaviour
+public class Rot2p : MonoBehaviour, ISwitchControl
 {
     public enum SplitAxis { X, Y, Z }
+
+    // Position names the server knows this switch by; order matches IsOn.
+    private static readonly string[] _positionNames = { "off", "on" };
 
     [Header("Identity")]
     [SerializeField] private SwitchDefinition _definition;
@@ -29,6 +32,21 @@ public class Rot2p : MonoBehaviour
     public bool IsOn { get; private set; }
 
     public event System.Action<bool> OnStateChanged;
+
+    // --- ISwitchControl -----------------------------------------------------
+
+    public string[] Positions => _positionNames;
+    public string Position => IsOn ? "on" : "off";
+
+    public void SetPosition(string position)
+    {
+        if (string.Equals(position, "on", System.StringComparison.OrdinalIgnoreCase))
+            SetState(true);
+        else if (string.Equals(position, "off", System.StringComparison.OrdinalIgnoreCase))
+            SetState(false);
+        else
+            Debug.LogWarning($"[Switch {Id}] ignoring unknown position '{position}'.");
+    }
 
     private void Awake()
     {

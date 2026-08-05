@@ -1,12 +1,16 @@
 using UnityEngine;
 
-public class Rot3p : MonoBehaviour
+public class Rot3p : MonoBehaviour, ISwitchControl
 {
     public enum SwitchPosition { Left, Center, Right }
     public enum SplitAxis { X, Y, Z }
 
+    // Position names the server knows this switch by; order matches SwitchPosition.
+    private static readonly string[] _positionNames = { "left", "center", "right" };
+
     [Header("Identity")]
     [SerializeField] private SwitchDefinition _definition;
+    public SwitchDefinition Definition => _definition;
     public string Id => _definition != null ? _definition.Id : "unassigned";
 
     [Header("Parts")]
@@ -30,6 +34,25 @@ public class Rot3p : MonoBehaviour
     public SwitchPosition CurrentPosition { get; private set; } = SwitchPosition.Center;
 
     public event System.Action<SwitchPosition> OnPositionChanged;
+
+    // --- ISwitchControl -----------------------------------------------------
+
+    public string[] Positions => _positionNames;
+    public string Position => _positionNames[(int)CurrentPosition];
+
+    public void SetPosition(string position)
+    {
+        for (int i = 0; i < _positionNames.Length; i++)
+        {
+            if (!string.Equals(position, _positionNames[i], System.StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            SetPosition((SwitchPosition)i);
+            return;
+        }
+
+        Debug.LogWarning($"[Switch {Id}] ignoring unknown position '{position}'.");
+    }
 
     private void Awake()
     {
