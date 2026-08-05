@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "updated": "2026-07-10",
+  "phase": "SICS-first (PICS deferred)",
+  "systems": [
+    { "system": "RCS",  "unit": "RCP",  "file": "rcs/rcp.json",  "status": "serialized", "notes": "2026-07-03; component-level, elec chain in-file (migrateTo EPSS). Pending Andriy review." },
+    { "system": "RCS",  "unit": "LOOP", "file": "rcs/loop.json", "status": "serialized", "notes": "2026-07-10; primary loop piping (HL/XL/CL), RTDs, flow elements, taps. Closes reactor-SG-RCP-reactor loop." },
+    { "system": "RCS",  "unit": "SG",   "file": "rcs/sg.json",   "status": "serialized", "notes": "2026-07-10; PRIMARY SIDE ONLY (plena + tubes, SGTR states). Secondary (shell, MSIV/MSSV/MSRT, FW/EFW/blowdown, N16) deferred - grows into this file later." },
+    { "system": "RCS",  "unit": "PZR",  "file": null, "status": "planned", "notes": "Surge line (loop 3) and spray taps (loops 2&3) already stubbed in loop.json; owns RCS-PRESS." },
+    { "system": "CVCS", "unit": null,   "file": null, "status": "planned", "notes": "RCP dependency: seal injection; loop.json dependency: charging (loops 1&4), letdown (loop 1 XL)" },
+    { "system": "CCWS", "unit": null,   "file": null, "status": "planned", "notes": "RCP dependency: thermal barrier, oil coolers" },
+    { "system": "EPSS", "unit": null,   "file": null, "status": "planned", "notes": "RCP dependency: 6.9kV normal buses" }
+  ]
+}

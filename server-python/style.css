@@ -1,0 +1,97 @@
+:root {
+  color-scheme: dark;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  background: #0f172a;
+  color: #f8fafc;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, #0f172a, #1e293b);
+  padding: 24px;
+}
+
+.panel {
+  width: min(720px, 100%);
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 20px;
+  box-shadow: 0 20px 40px rgba(2, 6, 23, 0.35);
+  padding: 30px;
+}
+
+header h1 {
+  margin: 0 0 8px;
+  font-size: 2rem;
+}
+
+header p {
+  margin: 0 0 20px;
+  color: #cbd5e1;
+}
+
+.card {
+  background: rgba(30, 41, 59, 0.95);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 16px;
+  padding: 18px;
+  margin-bottom: 16px;
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+  font-weight: 600;
+}
+
+input {
+  border: 1px solid #64748b;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 1rem;
+  background: #0f172a;
+  color: #f8fafc;
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+button {
+  border: none;
+  border-radius: 999px;
+  padding: 10px 16px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  background: #38bdf8;
+  color: #082f49;
+}
+
+button[data-action="stop"] {
+  background: #f87171;
+  color: #7f1d1d;
+}
+
+button[data-action="refresh"] {
+  background: #34d399;
+  color: #052e16;
+}
+
+.status-card h2 {
+  margin-top: 0;
+  margin-bottom: 8px;
+}
+
+#statusText, #serverUrl {
+  margin: 0 0 8px;
+  color: #e2e8f0;
+}

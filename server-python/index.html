@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PNPP Server Control</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="panel">
+    <header>
+      <h1>PNPP Server Control</h1>
+      <p>Manage the local server from this page, including the listening host and port.</p>
+    </header>
+
+    <form id="controlForm" class="card">
+      <label>
+        Host
+        <input id="host" name="host" type="text" value="localhost" required>
+      </label>
+      <label>
+        Port
+        <input id="port" name="port" type="number" min="1" max="65535" required>
+      </label>
+      <div class="actions">
+        <button type="submit">Start / Restart</button>
+        <button type="button" data-action="stop">Stop</button>
+        <button type="button" data-action="refresh">Refresh</button>
+      </div>
+    </form>
+
+    <section class="card status-card">
+      <h2>Server status</h2>
+      <p id="statusText">Loading...</p>
+      <p id="serverUrl">-</p>
+    </section>
+  </main>
+
+  <script>
+    const hostInput = document.getElementById('host');
+    const portInput = document.getElementById('port');
+    const statusText = document.getElementById('statusText');
+    const serverUrl = document.getElementById('serverUrl');
+    const form = document.getElementById('controlForm');
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      await sendAction('start');
+    });
+
+    document.querySelectorAll('[data-action]').forEach((button) => {
+      button.addEventListener('click', async () => {
+        await sendAction(button.dataset.action);
+      });
+    });
+
+    async function sendAction(action) {
+      statusText.textContent = 'Working...';
+      const body = new URLSearchParams();
+      body.set('action', action);
+      body.set('host', hostInput.value.trim() || 'localhost');
+      body.set('port', portInput.value.trim());
+
+      const response = await fetch('/control', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: body.toString()
+      });
+
+      const data = await response.json();
+      showStatus(data);
+    }
+
+    async function refreshStatus() {
+      const response = await fetch('/status');
+      const data = await response.json();
+      showStatus(data);
+    }
+
+    function showStatus(data) {
+      hostInput.value = data.host || 'localhost';
+      portInput.value = data.port || '';
+      statusText.textContent = data.message || 'No status available.';
+      serverUrl.textContent = data.running
+        ? `Open http://${data.host}:${data.port}`
+        : 'The server is currently stopped.';
+    }
+
+    refreshStatus();
+  </script>
+</body>
+</html>
