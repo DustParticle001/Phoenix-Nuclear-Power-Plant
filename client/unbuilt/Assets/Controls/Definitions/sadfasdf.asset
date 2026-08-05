@@ -1,0 +1,16 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 221bfa345ae84f44ea1171627c71275e, type: 3}
+  m_Name: sadfasdf
+  m_EditorClassIdentifier: Assembly-CSharp::SwitchDefinition
+  _id: 85c3ae66-71f0-4342-bfac-23da8450b719
+  displayName: asdfasf
