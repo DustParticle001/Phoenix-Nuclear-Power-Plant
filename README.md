@@ -3,7 +3,7 @@ A PWR nuclear reactor simulator based on the US-EPR type.
 
 ## Description
 Version: Pre-alpha v0.0.3
-A passion project of <a href="https://github.com/DustParticle001">DustParticle</a> and <a href="https://github.com/NectariCh">nectariich</a>.
+A passion project of <a href="https://github.com/DustParticle001">DustParticle</a> and <a href="https://github.com/NectariiCh">nectariich</a>.
 Based on the US-EPR reactor type.
 Doesn't have any actual reactors built so not guaranteed to be accurate.
 If someone is interested please contact <a href="https://discordapp.com/users/899249692540563516">me</a>. (Any help is appreciated)
