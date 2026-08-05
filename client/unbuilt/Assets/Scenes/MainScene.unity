@@ -1852,7 +1852,7 @@ Transform:
   m_GameObject: {fileID: 521224968}
   serializedVersion: 2
   m_LocalRotation: {x: 0.7071068, y: 0, z: 0, w: 0.7071068}
-  m_LocalPosition: {x: -7.72, y: 8.18, z: -5.66}
+  m_LocalPosition: {x: -7.72, y: 8.85, z: -5.66}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -2837,7 +2837,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a83d2f7ae04ab6f4f99b0d85377be998, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.RenderPipelines.Core.Runtime::UnityEngine.Rendering.ProbeVolumePerSceneData
-  serializedBakingSet: {fileID: 11400000, guid: a75a9b821ff97e24187aecc8628a8f11, type: 2}
+  serializedBakingSet: {fileID: 0}
   sceneGUID: 92ec131e4ad124640b039ab5b8d40d24
   obsoleteAsset: {fileID: 0}
   obsoleteCellSharedDataAsset: {fileID: 0}
@@ -3511,7 +3511,7 @@ MonoBehaviour:
   lowestSubdivLevelOverride: 0
   highestSubdivLevelOverride: 7
   overridesSubdivLevels: 0
-  mightNeedRebaking: 0
+  mightNeedRebaking: 1
   cachedTransform:
     e00: 1
     e01: 0
@@ -5236,14 +5236,30 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: -8002777075732357541, guid: 92227ef20dd8c4c4894d0e8e5975924e, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 1edc261f268b30248ad3e22547ed6699, type: 2}
     - target: {fileID: -5981074966902979802, guid: 92227ef20dd8c4c4894d0e8e5975924e, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
       objectReference: {fileID: 2100000, guid: ea73c1c22e3d57f4c975194dc9fe5ab2, type: 2}
+    - target: {fileID: -5435183847338303267, guid: 92227ef20dd8c4c4894d0e8e5975924e, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 1edc261f268b30248ad3e22547ed6699, type: 2}
     - target: {fileID: -3836660028878338617, guid: 92227ef20dd8c4c4894d0e8e5975924e, type: 3}
       propertyPath: 'm_Materials.Array.data[1]'
       value: 
       objectReference: {fileID: 2100000, guid: 20e9540b179bd6040bb14c1a2dc29b2f, type: 2}
+    - target: {fileID: -1879191110674042311, guid: 92227ef20dd8c4c4894d0e8e5975924e, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 1edc261f268b30248ad3e22547ed6699, type: 2}
+    - target: {fileID: 496971431089283904, guid: 92227ef20dd8c4c4894d0e8e5975924e, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 1edc261f268b30248ad3e22547ed6699, type: 2}
     - target: {fileID: 919132149155446097, guid: 92227ef20dd8c4c4894d0e8e5975924e, type: 3}
       propertyPath: m_Name
       value: MCR
@@ -5256,6 +5272,18 @@ PrefabInstance:
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
       objectReference: {fileID: 2100000, guid: 7965ed99daddb3642b49974071be2766, type: 2}
+    - target: {fileID: 4905417650818435321, guid: 92227ef20dd8c4c4894d0e8e5975924e, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 1edc261f268b30248ad3e22547ed6699, type: 2}
+    - target: {fileID: 7687347027154765262, guid: 92227ef20dd8c4c4894d0e8e5975924e, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 1edc261f268b30248ad3e22547ed6699, type: 2}
+    - target: {fileID: 8133086899891451879, guid: 92227ef20dd8c4c4894d0e8e5975924e, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 1edc261f268b30248ad3e22547ed6699, type: 2}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
