@@ -7,7 +7,7 @@ A passion project of <a href="https://github.com/DustParticle001">DustParticle</
 Based on the US-EPR reactor type.
 Doesn't have any actual reactors built so not guaranteed to be accurate.
 If someone is interested please contact <a href="https://discordapp.com/users/899249692540563516">me</a>. (Any help is appreciated)
-There is no official discord right now, the link will be posted here as soon as we make one.
+The official discord is <a href="https://discord.gg/VF7AmSdXWq">Desert Horizons Energy</a>.
 
 ##### Copyright:
-<a href="https://github.com/DustParticle001/Phoenix-Nuclear-Power-Plant">Phoenix Nuclear Power Plant</a> © 2026 by <a href="https://github.com/DustParticle001">DustParticle</a> is licensed under <a href="https://creativecommons.org/licenses/by-nc-nd/4.0/">CC BY-NC-ND 4.0</a>
+<a href="https://github.com/DustParticle001/Phoenix-Nuclear-Power-Plant">Phoenix Nuclear Power Plant</a> © 2026 by <a href="https://discord.gg/VF7AmSdXWq">DHE Simulations Team</a> is licensed under <a href="https://creativecommons.org/licenses/by-nc-nd/4.0/">CC BY-NC-ND 4.0</a>
