@@ -1,0 +1,64 @@
+Old Python server script:
+
+from http.server import HTTPServer, BaseHTTPRequestHandler
+from pathlib import Path
+import threading
+import msvcrt
+import time
+
+BASE_DIR = Path(__file__).parent
+INDEX_FILE = BASE_DIR / "index.html"
+
+port = int(input("Please specify the port: "))
+
+class MyHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header("Content-type", "text/html; charset=utf-8")
+        self.end_headers()
+
+        with open(INDEX_FILE, "rb") as f:
+            self.wfile.write(f.read())
+
+server = HTTPServer(("localhost", port), MyHandler)
+
+def run_server():
+    print(f"Serving on http://localhost:{port}")
+    print("Press 'e' then Enter focus on this terminal to stop.")
+    server.serve_forever()
+
+thread = threading.Thread(target=run_server, daemon=True)
+thread.start()
+
+while thread.is_alive():
+    if msvcrt.kbhit():
+        key = msvcrt.getch().lower()
+
+        if key == b"e":
+            print("\nStopping server...")
+            server.shutdown()
+            server.server_close()
+            break
+
+    time.sleep(0.05)
+
+thread.join()
+print("Server stopped.")
+
+
+Old HTML file:
+
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>PNPP Server</title>
+	<link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <footer>
+		<p id="contact">© 2026 All Rights Reserved | DHE Simulations Team</p>
+	</footer>
+</body>
+</html>
