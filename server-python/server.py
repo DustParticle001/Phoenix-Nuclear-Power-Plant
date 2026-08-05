@@ -7,6 +7,8 @@ import sys
 import threading
 import time
 
+from cr_data import *
+
 if sys.platform == "win32":
     import msvcrt
 else:

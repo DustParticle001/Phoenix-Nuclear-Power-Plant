@@ -1,0 +1,21 @@
+{
+	"switches": [
+		{
+			"id": 1,
+			"name": "Main Switch",
+			"enabled": true,
+			"powered": true,
+			"switch-state": "on"
+		}
+	],
+	"breakers": [
+		{
+			"id": 1,
+			"name": "Main Breaker",
+			"switch-state": "on",
+			"indicator-state": "on",
+			"powered": true,
+			"available": true
+		}
+	]
+}
