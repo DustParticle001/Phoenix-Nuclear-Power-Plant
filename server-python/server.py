@@ -8,6 +8,8 @@ import threading
 import time
 
 from cr_data import *
+from rcp_sim import RcpSimulation
+import api
 
 if sys.platform == "win32":
     import msvcrt
@@ -89,11 +91,29 @@ class ServerManager:
 
 
 class MyHandler(BaseHTTPRequestHandler):
-    def _send_json(self, payload):
-        body = json.dumps(payload).encode("utf-8")
-        self.send_response(200)
+    # Keep-alive: the client syncs several times a second, and every response
+    # here sets Content-Length, so 1.1 is safe and saves a reconnect per tick.
+    protocol_version = "HTTP/1.1"
+
+    def log_message(self, format, *args):
+        # /api/io traffic arrives several times a second per client — don't
+        # narrate it. Everything else logs as usual.
+        if not self.path.startswith("/api/io"):
+            super().log_message(format, *args)
+
+    def _send_cors_headers(self):
+        # The Unity editor ignores CORS, but WebGL builds and the browser
+        # control page don't.
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+
+    def _send_json(self, payload, status=200):
+        body = json.dumps(payload, indent=2).encode("utf-8")
+        self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
+        self._send_cors_headers()
         self.end_headers()
         self.wfile.write(body)
 
@@ -105,11 +125,26 @@ class MyHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def do_OPTIONS(self):
+        self.send_response(204)
+        self._send_cors_headers()
+        self.send_header("Content-Length", "0")
+        self.end_headers()
+
     def do_GET(self):
-        path = urlparse(self.path).path
+        parsed = urlparse(self.path)
+        path = parsed.path
 
         if path == "/status":
             self._send_json(self.server.manager.status())
+            return
+
+        if path == "/api" or path.startswith("/api/"):
+            status, payload = api.handle_get(
+                path,
+                query=parse_qs(parsed.query, keep_blank_values=True),
+                server_status=self.server.manager.status())
+            self._send_json(payload, status=status)
             return
 
         if path == "/style.css":
@@ -119,14 +154,30 @@ class MyHandler(BaseHTTPRequestHandler):
         html = INDEX_FILE.read_text(encoding="utf-8")
         self._send_text(html, "text/html; charset=utf-8")
 
+    def _read_body(self):
+        length = int(self.headers.get("Content-Length", "0") or "0")
+        return self.rfile.read(length).decode("utf-8") if length > 0 else ""
+
     def do_POST(self):
         path = urlparse(self.path).path
+
+        if path == "/api" or path.startswith("/api/"):
+            raw = self._read_body()
+            try:
+                payload = json.loads(raw) if raw.strip() else {}
+            except json.JSONDecodeError as error:
+                self._send_json({"error": f"Body is not valid JSON: {error}"}, status=400)
+                return
+
+            status, response = api.handle_post(path, payload)
+            self._send_json(response, status=status)
+            return
+
         if path != "/control":
             self.send_error(404)
             return
 
-        length = int(self.headers.get("Content-Length", "0"))
-        body = self.rfile.read(length).decode("utf-8")
+        body = self._read_body()
         data = parse_qs(body, keep_blank_values=True)
 
         action = data.get("action", [""])[0].lower()
@@ -153,6 +204,8 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Run the PNPP server with a browser-based control page")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8000)
+    parser.add_argument("--no-sim", action="store_true",
+                        help="don't run the RCP test simulation")
     return parser.parse_args()
 
 
@@ -161,8 +214,15 @@ def main():
     manager = ServerManager(host=args.host, port=args.port)
     manager.start()
 
+    sim = None
+    if not args.no_sim:
+        sim = RcpSimulation()
+        sim.start()
+
     display_host = "localhost" if manager.host in {"127.0.0.1", "0.0.0.0", "::"} else manager.host
     print(f"Serving on http://{display_host}:{manager.port}")
+    if sim is not None:
+        print("RCP test simulation running (4 pumps; --no-sim to disable).")
     print("Open the control page at http://localhost:<port>/ to change settings.")
     print("Press 'e' then Enter in this terminal to stop the server.")
 
@@ -183,6 +243,9 @@ def main():
                 break
 
         time.sleep(0.05)
+
+    if sim is not None:
+        sim.stop()
 
     print("Server stopped.")
 

@@ -1,0 +1,46 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1ebc24f3bb18c3c4db9dc7baebe74d49, type: 3}
+  m_Name: RCP 2 Freq.
+  m_EditorClassIdentifier: Assembly-CSharp::GaugeDefinition
+  _id: 370a8be9-2094-4bc8-ab74-5150b560a7f9
+  displayName: 
+  minValue: 0
+  maxValue: 80
+  units: Hz
+  majorTickInterval: 10
+  minorTicksPerMajor: 4
+  labelFormat: 0
+  labelMultiplier: 1
+  startAngle: -135
+  endAngle: 135
+  bands: []
+  faceColor: {r: 0.93, g: 0.93, b: 0.9, a: 1}
+  markingColor: {r: 0, g: 0, b: 0, a: 1}
+  labelFont: {fileID: 0}
+  tickOuterRadius: 0.9
+  majorTickLength: 0.14
+  minorTickLength: 0.08
+  majorTickWidth: 0.022
+  minorTickWidth: 0.01
+  labelRadius: 0.62
+  labelSize: 0.12
+  textSize: 0.1
+  bandOuterRadius: 0.965
+  bandInnerRadius: 0.905
+  drawDisplayName: 1
+  bakeResolution: 1024
+  bakeRotation: 3
+  materialTiling: {x: 0.15, y: 0.15}
+  materialOffset: {x: 0.5, y: 0.5}
+  bakedFace: {fileID: 2800000, guid: 9e0993c088c59d540af92f1df88113cd, type: 3}
+  bakedFaceMaterial: {fileID: 2100000, guid: 6619956160761954ba4c88eb60cabc6e, type: 2}

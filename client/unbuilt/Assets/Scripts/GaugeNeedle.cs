@@ -18,7 +18,8 @@ public class GaugeNeedle : MonoBehaviour
     [Header("Rotation Config")]
     [Tooltip("Local axis the needle rotates around. Negate it if the needle sweeps the wrong way.")]
     [SerializeField] private Vector3 _rotationAxis = Vector3.forward;
-    [SerializeField] private float _speed = 8f;
+    [Tooltip("Seconds the needle takes to catch up with a moved target. Keep it a touch above the server sync interval so stepped values blend into one sweep.")]
+    [SerializeField] private float _smoothTime = 0.35f;
 
     [Header("Testing")]
     [Tooltip("While enabled, the needle follows Test Value instead of SetValue calls.")]
@@ -30,6 +31,7 @@ public class GaugeNeedle : MonoBehaviour
     private Quaternion _zeroRotation;
     private float _currentAngle;
     private float _targetAngle;
+    private float _angleVelocity;
 
     private void Awake()
     {
@@ -48,7 +50,12 @@ public class GaugeNeedle : MonoBehaviour
         // shortest arc, which on swings wider than 180 deg cuts through the
         // bottom of the dial — outside the scale. The scalar angle always
         // stays within the sweep.
-        _currentAngle = Mathf.Lerp(_currentAngle, _targetAngle, Time.deltaTime * _speed);
+        //
+        // SmoothDamp, not an exponential lerp: synced values arrive as discrete
+        // setpoints a few times a second, and a lerp converges before the next
+        // one lands — the needle steps. SmoothDamp keeps its velocity across
+        // setpoint changes, so a stream of steps reads as one continuous sweep.
+        _currentAngle = Mathf.SmoothDamp(_currentAngle, _targetAngle, ref _angleVelocity, _smoothTime);
         Apply();
     }
 

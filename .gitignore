@@ -104,3 +104,11 @@ client/unbuilt/[Aa]ssets/[Ii]nit[Tt]est[Ss]cene*.unity*
 
 # Auto-generated cache in Assets folder.
 client/unbuilt/[Aa]ssets/[Ss]ceneDependencyCache*
+
+# Python bytecode cache (server-python).
+__pycache__/
+*.pyc
+
+# draw.io temporary/backup files (misc diagrams).
+.$*.bkp
+.$*.dtmp

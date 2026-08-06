@@ -6,7 +6,14 @@ Information about the client and backend.
 ```
 client/unbuilt/
 ├── Assets/
-│   └── ...                       
+│   ├── Scenes/
+│   │   ├── HomeScene.unity       # entry scene - join a server
+│   │   └── MainScene.unity       # control room
+│   ├── Scripts/
+│   │   ├── Networking/           # ServerConnection, ControlRoomTemplate
+│   │   ├── UI/                   # HomeScreen
+│   │   └── ...
+│   └── ...
 ├── Packages/
 │   ├── manifest.json
 │   └── packages-lock.json
@@ -18,12 +25,30 @@ client/unbuilt/
 ### Version
 6000.4.5f1+                   
 
+### Entry flow
+Build order is `HomeScene` (0) then `MainScene` (1) - both must stay in Build
+Settings. There is no offline mode: `HomeScene` asks for a server address, joins
+it (`/api/info` + `/api/template`), and only then loads the control room, so the
+scene always has server data behind it. `ServerConnection.Instance` carries the
+connection across the scene change. See `client/unbuilt/docs/joining-a-server.md`.
+
+### Live I/O
+`IoSync` (on the same persistent object) exchanges state with the server twice a
+second: up go all switch positions, down come switches other players moved,
+indicator lamp states and gauge values. Everything is keyed by definition UID, so
+no scene wiring is involved. Server side it's `data/io_definitions.json` +
+`io_state.py`. See `client/unbuilt/docs/server-io-sync.md` and
+`server-python/API.md`.
+
+`rcp_sim.py` is the first consumer: a test simulation that runs the four RCP
+frequency gauges up/down off their power switches (`--no-sim` to disable).
+
 ### Todo Client
 - Add control room
 - Server player location        
 - Interactive switches
 - Models
-- Fetching server?               
+- Bind template data (panels, annunciator legends) to the scene
 
 -----
 
