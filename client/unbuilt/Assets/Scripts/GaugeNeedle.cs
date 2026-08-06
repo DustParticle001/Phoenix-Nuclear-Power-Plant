@@ -33,9 +33,18 @@ public class GaugeNeedle : MonoBehaviour
     private float _targetAngle;
     private float _angleVelocity;
 
+    // A dial that sweeps the whole circle has no ends: its scale wraps, so the
+    // shortest way between two readings is the way the pointer really travels.
+    private float _sweep;
+    private bool _wraps;
+
     private void Awake()
     {
         _zeroRotation = _needle.localRotation;
+
+        _sweep = _definition != null ? Mathf.Abs(_definition.endAngle - _definition.startAngle) : 0f;
+        _wraps = _sweep >= 359.99f;
+
         SetValue(_definition != null ? _definition.minValue : 0f);
         _currentAngle = _targetAngle;
         Apply();
@@ -51,6 +60,18 @@ public class GaugeNeedle : MonoBehaviour
         // bottom of the dial — outside the scale. The scalar angle always
         // stays within the sweep.
         //
+        // On a full-circle dial the scale wraps, and the scalar angle doesn't
+        // know it: a synchroscope crossing 12 o'clock reads 359 then 1, which is
+        // two degrees on and 358 back. Roll the current angle into the same turn
+        // as the target first, so the needle takes the short way — on a pointer
+        // that turns continuously, that is always the way it is really going.
+        if (_wraps)
+        {
+            float half = _sweep * 0.5f;
+            float delta = Mathf.Repeat(_targetAngle - _currentAngle + half, _sweep) - half;
+            _currentAngle = _targetAngle - delta;
+        }
+
         // SmoothDamp, not an exponential lerp: synced values arrive as discrete
         // setpoints a few times a second, and a lerp converges before the next
         // one lands — the needle steps. SmoothDamp keeps its velocity across

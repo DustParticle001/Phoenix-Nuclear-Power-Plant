@@ -9,6 +9,8 @@ import time
 
 from cr_data import *
 from rcp_sim import RcpSimulation
+from turbine_sim import TurbineSimulation
+from valve_sim import ValveSimulation
 import api
 
 if sys.platform == "win32":
@@ -205,7 +207,7 @@ def parse_args():
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8000)
     parser.add_argument("--no-sim", action="store_true",
-                        help="don't run the RCP test simulation")
+                        help="don't run the test simulations")
     return parser.parse_args()
 
 
@@ -214,15 +216,18 @@ def main():
     manager = ServerManager(host=args.host, port=args.port)
     manager.start()
 
-    sim = None
+    sims = []
     if not args.no_sim:
-        sim = RcpSimulation()
-        sim.start()
+        # Valves before the turbine: the turbine's demand is a valve position.
+        sims = [RcpSimulation(), ValveSimulation(), TurbineSimulation()]
+        for sim in sims:
+            sim.start()
 
     display_host = "localhost" if manager.host in {"127.0.0.1", "0.0.0.0", "::"} else manager.host
     print(f"Serving on http://{display_host}:{manager.port}")
-    if sim is not None:
-        print("RCP test simulation running (4 pumps; --no-sim to disable).")
+    if sims:
+        print("Test simulations running (4 RCPs, turbine + bypass valves, "
+              "turbine run-up; --no-sim to disable).")
     print("Open the control page at http://localhost:<port>/ to change settings.")
     print("Press 'e' then Enter in this terminal to stop the server.")
 
@@ -244,7 +249,7 @@ def main():
 
         time.sleep(0.05)
 
-    if sim is not None:
+    for sim in sims:
         sim.stop()
 
     print("Server stopped.")
