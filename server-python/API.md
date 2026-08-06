@@ -217,17 +217,100 @@ Notes:
 - Value changes are **not** auto-saved (they'd rewrite the file constantly).
   Definition changes are.
 
-### The RCP test simulation (`rcp_sim.py`)
+### The test simulations
 
-The working example of the above: four reactor coolant pumps whose frequency
-gauge follows their power switch — switch on runs the pump up toward 60 Hz
-(τ = 6 s), switch off coasts it down (τ = 20 s, the flywheel). `server.py`
-starts it automatically; `--no-sim` runs the server bare.
+Three working examples of the above. `server.py` starts them all automatically;
+`--no-sim` runs the server bare. Each defines any of its entries that are
+missing on startup (uids are in a table at the top of the file), so they work
+before a client ever connects. Use them as the template for future systems: put
+your uids in a table, read inputs with `get_switch`, write outputs with
+`set_gauge` on a tick.
 
-On startup it defines any of its eight entries that are missing (uids are the
-table at the top of the file), so it works before a client ever connects. Use it
-as the template for future systems: put your uids in a table, read inputs with
-`get_switch`, write outputs with `set_gauge` on a tick.
+They also show how systems chain: a gauge one sim writes is the input another
+reads (switches → valve position → turbine speed). No wiring needed for that —
+they share the one `IoState`, so a sim just reads the uid it cares about.
+
+**`rcp_sim.py`** — four reactor coolant pumps whose frequency gauge follows
+their power switch. Switch on runs the pump up toward 60 Hz (τ = 6 s), switch
+off coasts it down (τ = 20 s, the flywheel).
+
+**`valve_sim.py`** — the turbine and bypass valves, on three-position (`Rot3p`)
+switches: **left strokes the valve closed, right strokes it open, centre holds
+it.** Travel is linear at a fixed rate and the position gauge clamps at 0/100 %.
+
+| Switch | Gauge | Rate | Full stroke |
+| --- | --- | --- | --- |
+| Turbine Valve | Turbine Valve Pos | 4.0 %/s | 25 s |
+| Turbine Valve Close | Turbine Valve Pos | 0.1 %/s | 1000 s |
+| Bypass Valve | Bypass Valve Pos | 5.0 %/s | 20 s |
+
+Two switches share the turbine valve gauge: the main one, and the "Close" fine
+control. That one is a vernier rather than a way to stroke the valve — at
+0.1 %/s a second of it is 8 RPM of speed demand or 2.3 MW of load, which is the
+resolution you need to land inside the sync band and to trim load. Their rates
+sum, so holding both the same way drives the valve at 4.1 %/s. An unpowered
+switch contributes nothing.
+
+**`turbine_sim.py`** — the turbine-generator set, from run-up through
+synchronising to load. One module rather than three because each stage locks the
+next: the breaker fixes the speed, and the speed being fixed is what turns valve
+position into megawatts.
+
+*Run-up.* Valve position is the speed demand, straight through and proportional,
+pinned to the design point **22.8 % → 1800 RPM** (half speed). That's 78.95 RPM
+per % of valve. Speed glides to it as a first-order lag (τ = 30 s), so the
+turbine pulls hard while it's a long way out and creeps in over the last few
+RPM — 1138 RPM at 30 s, 1710 at 90 s, settling around four minutes. The demand
+clamps to the dial for the needle's sake, but **not** for load: past synchronous
+speed the surplus is what makes megawatts, so clamping there would cap the
+machine at a few MW.
+
+*Synchronising.* The **phase offset** between machine and grid is carried
+forward every tick no matter what is displaying it — it's a fact about the two
+waveforms, and it goes on drifting while nobody is watching. Slip is the rate:
+one full turn per slip cycle, winding forward (clockwise) when the turbine is
+the faster, so 5 RPM out is 0.167 Hz of slip and 60 °/s.
+
+The synchroscope only reads that offset out. Switching the **Synchroscope
+Toggle** in lands the pointer on the phase as it already stands, rather than
+picking up from wherever it was parked. It reads within **±10 RPM** of grid
+speed, where the drift is slow enough to follow — further out the pointer is an
+unreadable blur, and past ~75 RPM it turns more than half a dial between syncs
+and would alias into reading backwards. The offset keeps being tracked either
+way, so the dial agrees with it the moment it comes back in band.
+
+*On the grid.* Shutting the **Gen Breaker** inside that band puts the machine on
+the grid, and the grid holds it at exactly synchronous speed. Shutting it
+outside the band does nothing — that's what makes you sync rather than just
+close it. The lock keeps itself true (pinned to grid speed, the band test stays
+satisfied), and opening the breaker releases the turbine back to its demand.
+
+*Load.* On the grid the turbine can't accelerate, so demand above synchronous
+speed becomes torque: 22.8 % of valve is exactly **0 MW**, wide open is the
+Arabelle's rated **1800 MW**, and everything between is proportional at
+0.295 MW per RPM of surplus demand. Below 22.8 % the load goes negative — the
+machine motoring — and for now the gauge just stops at zero; the reverse-current
+annunciator is what will show it. Off the grid, load is 0.
+
+| Signal | Uid | Range | Direction |
+| --- | --- | --- | --- |
+| Turbine RPM | `3eec464f` | 0–2000 RPM | out |
+| Gen Load | `5bda98ec` | 0–2000 MW | out |
+| Gen Synchroscope | `5bbbde79` | 0–360° | out |
+| Grid Freq. | `d4b07123` | 57–63 Hz | in (sits at 60) |
+| Gen Breaker | `24652917` | off/on | in |
+| Synchroscope Toggle | `489d8134` | off/on | in |
+
+Grid frequency is an input this never writes, so `POST /api/io/set` can move it
+and everything follows: synchronous speed is `gridHz × 30` (4-pole machine), and
+the load zero point moves with it. A gradual change keeps the machine locked and
+dragged along; only an instantaneous jump of more than 10 RPM (0.33 Hz) breaks
+the lock.
+
+> The Unity faces **Turbine RPM** (0–2000) and **Turbine RPM Close** (1795–1805,
+> the expanded scale for synchronising) share one uid. The server holds a single
+> value over the full range and each needle clips it to its own face, so the
+> I/O entry uses the coarse 0–2000 range.
 
 ## Editing the template
 

@@ -52,6 +52,14 @@ Nothing to register. Give the control a definition with a UID and it syncs:
   `left`/`center`/`right` for `Rot3p`.
 - **Gauges** — any `GaugeNeedle`. Note that `Use Test Value` on the needle
   overrides server values; turn it off for gauges the server drives.
+  Several needles **may** share one UID — one signal, more than one face. The
+  turbine tachometer does this: a 0–2000 RPM dial and an expanded 1795–1805 one
+  for synchronising, both fed the same value, each clipping it to its own
+  definition's range. Same trick works for a repeater on a second panel.
+  A definition whose sweep is the full circle (`startAngle` 0 → `endAngle` 360,
+  like the synchroscope) is treated as wrapping: the needle takes the short way
+  between two readings, so a pointer turning past 12 o'clock carries on round
+  instead of unwinding all the way back.
 - **Indicators** — any `SwitchLampIndicator`. It answers to its own `Definition`
   if one is set, otherwise the UID of the switch it hangs under.
 
@@ -75,8 +83,12 @@ the switch.
 - `IoSync` is on the `ServerConnection` object at runtime — select it in the
   hierarchy while playing. **Verbose** logs every applied change; it also reports
   how many controls got bound by UID on each sync.
-- Two controls sharing a UID is logged as a warning and the second is ignored
-  (see the duplication warning in `interactable-api-usage-guide.md`).
+- Two **switches or indicators** sharing a UID is logged as a warning and the
+  second is ignored — they're inputs, and two controls reporting one UID would
+  fight over it (see the duplication warning in
+  `interactable-api-usage-guide.md`). Gauges are outputs, so sharing is allowed
+  and every needle on the UID is driven; the verbose line counts needles and
+  UIDs separately.
 - A uid the server has no definition for is warned about once, then ignored.
 - Failed requests are retried at the normal interval; the log is throttled so a
   stopped server doesn't fill the console.

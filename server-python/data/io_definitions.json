@@ -63,6 +63,69 @@
       "position": "off",
       "powered": true,
       "available": true
+    },
+    {
+      "uid": "a8f5e1af-ee37-4243-bfbc-f311c4511e96",
+      "id": "Turbine Valve",
+      "name": "Turbine Valve",
+      "positions": [
+        "left",
+        "center",
+        "right"
+      ],
+      "position": "center",
+      "powered": true,
+      "available": true
+    },
+    {
+      "uid": "9e8846e0-cd3b-499f-aaa2-24f045dfcb54",
+      "id": "Turbine Valve Close",
+      "name": "Turbine Valve Close",
+      "positions": [
+        "left",
+        "center",
+        "right"
+      ],
+      "position": "center",
+      "powered": true,
+      "available": true
+    },
+    {
+      "uid": "0ac4fee0-5337-457a-8e58-5bca5ad715c1",
+      "id": "Bypass Valve",
+      "name": "Bypass Valve",
+      "positions": [
+        "left",
+        "center",
+        "right"
+      ],
+      "position": "center",
+      "powered": true,
+      "available": true
+    },
+    {
+      "uid": "24652917-586c-4784-825c-c24941506d94",
+      "id": "Gen Breaker",
+      "name": "Gen Breaker Switch",
+      "positions": [
+        "off",
+        "on"
+      ],
+      "position": "off",
+      "powered": true,
+      "available": true
+    },
+    {
+      "uid": "489d8134-f962-4918-a5db-99dde088f8b0",
+      "id": "Synchroscope Toggle",
+      "name": "Synchroscope Toggle",
+      "positions": [
+        "off",
+        "on"
+      ],
+      "position": "off",
+      "powered": true,
+      "available": true
     }
   ],
   "indicators": [],
@@ -105,6 +168,66 @@
       "minValue": 0.0,
       "maxValue": 80.0,
       "value": 0.0,
+      "valid": true
+    },
+    {
+      "uid": "d2abdb5e-33cd-4823-a253-20cb7197190b",
+      "id": "Turbine Valve Pos",
+      "name": "Turbine Valve Pos",
+      "units": "%",
+      "minValue": 0.0,
+      "maxValue": 100.0,
+      "value": 0.0,
+      "valid": true
+    },
+    {
+      "uid": "4acc4604-0a08-4514-bce4-997a10bdfb97",
+      "id": "Bypass Valve Pos",
+      "name": "Bypass Valve Pos",
+      "units": "%",
+      "minValue": 0.0,
+      "maxValue": 100.0,
+      "value": 0.0,
+      "valid": true
+    },
+    {
+      "uid": "3eec464f-9dd1-437b-bc17-af5353b69b7c",
+      "id": "Turbine RPM",
+      "name": "Turbine RPM",
+      "units": "RPM",
+      "minValue": 0.0,
+      "maxValue": 2000.0,
+      "value": 0.0,
+      "valid": true
+    },
+    {
+      "uid": "5bda98ec-9015-46ed-b820-a923543e466b",
+      "id": "Gen Load",
+      "name": "Gen Load",
+      "units": "MW",
+      "minValue": 0.0,
+      "maxValue": 2000.0,
+      "value": 0.0,
+      "valid": true
+    },
+    {
+      "uid": "5bbbde79-234b-4f1f-882f-c3e8813167cf",
+      "id": "Gen Synchroscope",
+      "name": "Gen Synchroscope",
+      "units": "",
+      "minValue": 0.0,
+      "maxValue": 360.0,
+      "value": 0.0,
+      "valid": true
+    },
+    {
+      "uid": "d4b07123-9cdc-44fc-abd1-177a8202515a",
+      "id": "Grid Freq.",
+      "name": "Grid Freq.",
+      "units": "Hz",
+      "minValue": 57.0,
+      "maxValue": 63.0,
+      "value": 60.0,
       "valid": true
     }
   ]

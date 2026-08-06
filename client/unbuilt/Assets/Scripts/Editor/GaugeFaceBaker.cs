@@ -7,9 +7,10 @@ using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.HighDefinition;
 
-// Bakes a GaugeDefinition into a dial-face texture (PNG saved next to the
-// definition asset) plus an HDRP/Lit material that uses it, and links both
-// back into the definition. No cameras or scene objects are involved: the
+// Bakes a GaugeDefinition into a dial-face texture (PNG saved in an "images"
+// folder beside the definition asset) plus an HDRP/Lit material that uses it
+// (in a sibling "materials" folder), and links both back into the definition.
+// No cameras or scene objects are involved: the
 // ticks/bands/labels are built as meshes and rendered straight into a
 // RenderTexture with a CommandBuffer, so the bake can't be polluted by
 // scene lighting or geometry.
@@ -170,9 +171,15 @@ public static class GaugeFaceBaker
         rt.Release();
         Object.DestroyImmediate(rt);
 
-        // --- Save PNG + material next to the definition, link them back ---
+        // --- Save PNG + material beside the definition, link them back ---
         string dir = Path.GetDirectoryName(AssetDatabase.GetAssetPath(def)).Replace('\\', '/');
-        string texPath = $"{dir}/{def.name}_Face.png";
+        string imageDir = EnsureFolder(dir, "images");
+        string materialDir = EnsureFolder(dir, "materials");
+
+        string texPath = $"{imageDir}/{def.name}_Face.png";
+        // Bakes from before the subfolder split live next to the definition;
+        // move them so importer settings and the GUID survive.
+        Migrate($"{dir}/{def.name}_Face.png", texPath);
         File.WriteAllBytes(texPath, png);
         AssetDatabase.ImportAsset(texPath);
 
@@ -184,7 +191,8 @@ public static class GaugeFaceBaker
         }
         var faceTex = AssetDatabase.LoadAssetAtPath<Texture2D>(texPath);
 
-        string matPath = $"{dir}/{def.name}_Face.mat";
+        string matPath = $"{materialDir}/{def.name}_Face.mat";
+        Migrate($"{dir}/{def.name}_Face.mat", matPath);
         var mat = AssetDatabase.LoadAssetAtPath<Material>(matPath);
         if (mat == null)
         {
@@ -206,6 +214,27 @@ public static class GaugeFaceBaker
         AssetDatabase.SaveAssets();
 
         Debug.Log($"[GaugeFaceBaker] Baked '{def.name}' → {texPath}");
+    }
+
+    private static string EnsureFolder(string parent, string name)
+    {
+        string path = $"{parent}/{name}";
+        if (!AssetDatabase.IsValidFolder(path))
+            AssetDatabase.CreateFolder(parent, name);
+        return path;
+    }
+
+    // Relocates a previously baked asset, keeping its GUID so anything already
+    // referencing it (scene materials, prefabs) keeps pointing at the same asset.
+    private static void Migrate(string oldPath, string newPath)
+    {
+        if (oldPath == newPath) return;
+        if (AssetDatabase.LoadAssetAtPath<Object>(oldPath) == null) return;
+        if (AssetDatabase.LoadAssetAtPath<Object>(newPath) != null) return;
+
+        string error = AssetDatabase.MoveAsset(oldPath, newPath);
+        if (!string.IsNullOrEmpty(error))
+            Debug.LogWarning($"[GaugeFaceBaker] Could not move '{oldPath}' → '{newPath}': {error}");
     }
 
     // Direction of a dial angle in y-up pixel space (0 = up, clockwise positive).

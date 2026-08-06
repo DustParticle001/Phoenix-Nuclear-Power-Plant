@@ -43,15 +43,22 @@ public class IoSync : MonoBehaviour
     public bool HasSynced => Revision >= 0;
 
     public int SwitchCount => _switches.Count;
-    public int GaugeCount => _gauges.Count;
+    public int GaugeCount => _gaugeCount;
     public int IndicatorCount => _indicators.Count;
 
     private readonly Dictionary<string, ISwitchControl> _switches =
         new Dictionary<string, ISwitchControl>();
-    private readonly Dictionary<string, GaugeNeedle> _gauges =
-        new Dictionary<string, GaugeNeedle>();
+    // Several needles per UID: one signal can have more than one face. The
+    // turbine tachometer is read on a 0-2000 dial and on an expanded 1795-1805
+    // one for synchronising - same value, and each needle clips it to its own
+    // definition's range. Switches can't work that way (two controls reporting
+    // one UID would fight over it), so they stay one-to-one.
+    private readonly Dictionary<string, List<GaugeNeedle>> _gauges =
+        new Dictionary<string, List<GaugeNeedle>>();
     private readonly Dictionary<string, SwitchLampIndicator> _indicators =
         new Dictionary<string, SwitchLampIndicator>();
+
+    private int _gaugeCount;
 
     private readonly HashSet<string> _reportedUnknown = new HashSet<string>();
     private string _sessionId;
@@ -106,6 +113,7 @@ public class IoSync : MonoBehaviour
     {
         _switches.Clear();
         _gauges.Clear();
+        _gaugeCount = 0;
         _indicators.Clear();
 
         // FindObjectsByType can't search for an interface, so the switch scan
@@ -117,14 +125,32 @@ public class IoSync : MonoBehaviour
         }
 
         foreach (var gauge in FindObjectsByType<GaugeNeedle>(FindObjectsInactive.Include))
-            Register(_gauges, gauge.Id, gauge, "gauge", gauge);
+            RegisterGauge(gauge);
 
         foreach (var indicator in FindObjectsByType<SwitchLampIndicator>(FindObjectsInactive.Include))
             Register(_indicators, indicator.Id, indicator, "indicator", indicator);
 
         if (_verbose)
             Debug.Log($"[IoSync] {_switches.Count} switches, {_indicators.Count} indicators, " +
-                      $"{_gauges.Count} gauges bound by UID.");
+                      $"{_gaugeCount} gauge needles on {_gauges.Count} UIDs bound.");
+    }
+
+    // Gauges are read-only on the client, so sharing a UID is a feature rather
+    // than a clash: every needle bound to it gets the value.
+    private void RegisterGauge(GaugeNeedle gauge)
+    {
+        string uid = gauge.Id;
+        if (string.IsNullOrEmpty(uid) || uid == "unassigned")
+            return;   // no definition assigned yet - nothing the server can key on
+
+        if (!_gauges.TryGetValue(uid, out List<GaugeNeedle> needles))
+        {
+            needles = new List<GaugeNeedle>(1);
+            _gauges[uid] = needles;
+        }
+
+        needles.Add(gauge);
+        _gaugeCount++;
     }
 
     private void Register<T>(Dictionary<string, T> into, string uid, T item,
@@ -197,7 +223,7 @@ public class IoSync : MonoBehaviour
             Debug.Log($"[IoSync] synced with {baseUrl} at revision {Revision}: " +
                       $"{Count(payload.switches)} switches, {Count(payload.indicators)} indicators, " +
                       $"{Count(payload.gauges)} gauges from the server; " +
-                      $"{_switches.Count}/{_indicators.Count}/{_gauges.Count} bound in the scene.");
+                      $"{_switches.Count}/{_indicators.Count}/{_gaugeCount} bound in the scene.");
         }
     }
 
@@ -327,14 +353,18 @@ public class IoSync : MonoBehaviour
 
     private void ApplyGauge(IoGaugeEntry entry)
     {
-        if (entry == null || !_gauges.TryGetValue(entry.uid, out GaugeNeedle needle)
-            || needle == null)
+        if (entry == null || !_gauges.TryGetValue(entry.uid, out List<GaugeNeedle> needles))
             return;
 
-        needle.SetValue(entry.value);
+        foreach (GaugeNeedle needle in needles)
+        {
+            if (needle != null)
+                needle.SetValue(entry.value);
+        }
 
         if (_verbose)
-            Debug.Log($"[IoSync] gauge {entry.uid} → {entry.value} {entry.units}.");
+            Debug.Log($"[IoSync] gauge {entry.uid} → {entry.value} {entry.units} " +
+                      $"on {needles.Count} needle{(needles.Count == 1 ? "" : "s")}.");
     }
 
     // ------------------------------------------------------------ diagnostics
