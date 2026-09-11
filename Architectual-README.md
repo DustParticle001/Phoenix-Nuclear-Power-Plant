@@ -11,6 +11,8 @@ client/unbuilt/
 │   │   └── MainScene.unity       # control room
 │   ├── Scripts/
 │   │   ├── Networking/           # ServerConnection, ControlRoomTemplate
+│   │   ├── Annunciators/         # rack definitions, windows, flash groups
+│   │   ├── Editor/               # gauge face baker, annunciator rack builder
 │   │   ├── UI/                   # HomeScreen
 │   │   └── ...
 │   └── ...
@@ -35,13 +37,35 @@ connection across the scene change. See `client/unbuilt/docs/joining-a-server.md
 ### Live I/O
 `IoSync` (on the same persistent object) exchanges state with the server twice a
 second: up go all switch positions, down come switches other players moved,
-indicator lamp states and gauge values. Everything is keyed by definition UID, so
-no scene wiring is involved. Server side it's `data/io_definitions.json` +
-`io_state.py`. See `client/unbuilt/docs/server-io-sync.md` and
-`server-python/API.md`.
+indicator lamp states, gauge values and annunciator windows. Everything is keyed
+by definition UID, so no scene wiring is involved. Server side it's
+`data/io_definitions.json` + `io_state.py`. See
+`client/unbuilt/docs/server-io-sync.md` and `server-python/API.md`.
 
-`rcp_sim.py` is the first consumer: a test simulation that runs the four RCP
-frequency gauges up/down off their power switches (`--no-sim` to disable).
+`rcp_sim.py` is the biggest consumer: the four reactor coolant pumps with their
+electrical supply (NBUS feeders, SBO-backed auxiliary MCCs with automatic
+transfer), motor run-up and flywheel coastdown, ammeter and loop flow gauges,
+and the protection that trips them. `rod_sim.py` is the newest and the most
+temporary: the Westinghouse rod control system (eight banks, the overlap
+sequence, the rod stops) driven by the switches on the MRCS section, with a
+deliberately minimal reactivity-and-period power model hung off it — plus the
+boric acid control and the two RPS trip breakers, which are camping there until
+CVCS and RPS get files of their own. `rcs_thermal.py` turns that power and the
+pumps' flow into the primary temperatures: the programmed Tavg, the core dT and
+each loop's hot and cold leg. `commands.py` is the instructor's console that
+inserts the casualties — `/turnswitch`, `/fault`, `/component`, `/rods`,
+`/rcs`, typed into the server terminal. `--no-sim` disables the lot. See
+`server/API.md`.
+
+### Annunciator racks
+A rack is described rather than modelled: an `AnnunciatorRackDefinition` holds the
+size, the window grid, the legends and the lens colours (both imported from CSV),
+and `Editor/AnnunciatorRackBuilder.cs` generates the frame mesh, the lens mesh,
+the HDRP materials, the legends and a prefab from it. Windows are outputs the
+**client** defines — their uids come from the definition and register themselves
+with the server on the first sync — and racks sharing a flash group blink as one
+panel, across as many racks as are in the group. See the annunciator sections of
+`docs/interactable-api-usage-guide.md` and `docs/server-io-sync.md`.
 
 ### Todo Client
 - Add control room

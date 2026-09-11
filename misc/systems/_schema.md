@@ -154,6 +154,65 @@ Interfaces this unit needs from other systems (each gets its own file eventually
   Taps and nozzles (SI, charging, letdown, spray, surge) are **links with
   notes**, not devices - a nozzle only becomes a device when it gets a valve
   or its own failure state.
-- Numeric values that are estimates (no built US EPR exists) carry `"~"` prefix
-  in strings or an `"approx": true` flag in params.
+- Numeric values that are estimates carry `"~"` prefix in strings or an
+  `"approx": true` flag in params. Since the 2026-09-06 rebase these are
+  replaceable with sourced UFSAR numbers - see **Plant reference** below.
 - `_manifest.json` tracks per-system status: `planned | diagrammed | serialized`.
+- **Role suffixes on parallel feeders.** Where two breakers feed the *same*
+  node, the feeds-rule alone cannot tell them apart, so add the role:
+  `NBUS-1-NORM-52` (normal/unit source) and `NBUS-1-RES-52` (reserve/offsite
+  source). Same pattern as the existing `RCP1-MCC-ALT-52`.
+- **Transformer naming exception.** The three transformers that have universal
+  industry names keep them instead of the feeds-rule `-XFMR` form, so they
+  match UFSAR Ch 8 wording: `MSUT` (main step-up), `UAT-{n}` (unit auxiliary,
+  generator-fed), `RAT` (reserve auxiliary, switchyard-fed). Everything smaller
+  still follows the feeds-rule (`RCP1-MCC-XFMR`).
+- **Automatic schemes are devices.** A transfer scheme, sequencer or load
+  shedder gets a device with `kind: "other"` and explicit states
+  (`NBUS-1-XFER`: normal / reserve / transferring / blocked / failed), not a
+  pile of loose logic entries. Its steps go in `logic.sequences`.
+
+## Plant reference
+
+Late-1990s **Westinghouse 4-loop PWR**, rebased 2026-09-06 from the US EPR.
+Consequences that touch every file:
+
+- The MCR is **all hardwired benchboard and vertical panels**. There is no
+  PICS soft-control layer - a plant computer and SPDS CRTs exist for
+  indication only. `mcr.pics` stays empty permanently; anything that would
+  have lived only on PICS needs real panel hardware (meters, recorders,
+  annunciator windows).
+- Numbers are **sourceable**: late-90s W 4-loop UFSARs are public, so
+  `approx: true` should shrink over time rather than being permanent.
+- ANSI device numbers, 125 VDC control power, `ESFAS`/`RPS` naming and the
+  elbow-tap loop flow convention are all *more* at home here than in the EPR.
+
+## Two rules the simulation depends on
+
+- **The electrical model is the source of truth; a switch is a request.**
+  A pump runs iff its breaker is closed and its bus is energized - never
+  because a switch says so. `rcp_sim.py` currently has this backwards (speed
+  follows the switch position) and is the reference case to fix. The io_state
+  `powered` flag on a switch means "the 125 VDC control bus for that cubicle
+  is alive", not `true`.
+- **Out of correspondence** (the latching-switch convention, until a
+  spring-return controller exists). A latching control switch is a *maintained*
+  request: `["stop","run"]` for a pump, `["open","closed"]` for a breaker. Any
+  trip acts on the equipment while the switch stays where the operator left
+  it, so the two disagree - the lamp pair shows the mismatch (both lit, or red
+  flashing) and re-closing is **blocked until the switch is cycled back**.
+  This is real plant behavior, needs no new Unity controller, and gives the
+  lamp pair a job. Three-position latching switches (`Rot3p`) should be used
+  as genuine maintained **selectors** - transfer scheme mode, meter selection -
+  not as momentary commands.
+
+## Diagram colors (misc/diagram-a.drawio)
+
+| colour | meaning |
+|---|---|
+| `#9673a6` purple | grid / switchyard |
+| `#d6b656` yellow | generator voltage (generator, isolated phase bus, MSUT and UAT primaries) |
+| `#d79b00` orange | MV power (6.9 kV and 4.16 kV) |
+| `#82b366` green | LV power (480 V load centers, MCCs) |
+| `#6c8ebf` blue | primary coolant |
+| grey dashed | control / trip / signal |

@@ -1,0 +1,284 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0110bfc2095d12949913ac13fbefb051, type: 3}
+  m_Name: RCP_P1
+  m_EditorClassIdentifier: Assembly-CSharp::AnnunciatorRackDefinition
+  _id: 31c982d4-e24c-436a-ad1a-7ad33ff72acc
+  displayName: 
+  flashGroup: 
+  sartGroup: 1
+  width: 0.9
+  height: 0.35
+  cellsX: 8
+  cellsY: 6
+  depth: 0.09
+  bezelMargin: 0.018
+  ribWidth: 0.008
+  lensRecess: 0.01
+  announceFlashSeconds: 0.2
+  clearFlashSeconds: 0.8
+  frameColor: {r: 0.18, g: 0.18, b: 0.19, a: 1}
+  unlitLensColor: {r: 0.62, g: 0.62, b: 0.59, a: 1}
+  unlitTint: 0.22
+  litIntensity: 4
+  legendColor: {r: 0.06, g: 0.06, b: 0.06, a: 1}
+  legendSize: 0.15
+  legendPadding: 0.004
+  legendFont: {fileID: 0}
+  tiles:
+  - uid: 15cbd734-529f-4720-a155-3600cd13b198
+    id: RCP_1_TRIP
+    legend: RCP 1 Trip
+    color: 2
+    blank: 0
+  - uid: 889d15cc-e581-4909-b763-8a4fc522102c
+    id: RCP_2_TRIP
+    legend: RCP 2 Trip
+    color: 2
+    blank: 0
+  - uid: da1c4786-4341-47e2-bc42-e17c022fdcdd
+    id: RCP_3_TRIP
+    legend: RCP 3 Trip
+    color: 2
+    blank: 0
+  - uid: e33085ca-3bdb-420a-a22c-f446a72083c0
+    id: RCP_4_TRIP
+    legend: RCP 4 Trip
+    color: 2
+    blank: 0
+  - uid: 1f9dab8e-c443-403d-8f7d-afafc13340e5
+    id: RCP_1_FDR_MECH_RELAY_TRIP
+    legend: RCP 1 FDR/Mech. Relay Trip
+    color: 1
+    blank: 0
+  - uid: a2c66898-189b-4923-a304-aa456830492c
+    id: RCP_2_FDR_MECH_RELAY_TRIP
+    legend: RCP 2 FDR/Mech. Relay Trip
+    color: 1
+    blank: 0
+  - uid: 5b628004-a72f-4c9a-b795-cc2c19d426c4
+    id: RCP_3_FDR_MECH_RELAY_TRIP
+    legend: RCP 3 FDR/Mech. Relay Trip
+    color: 1
+    blank: 0
+  - uid: 3accb775-66e4-4329-878d-eabcd1d9b5c6
+    id: RCP_4_FDR_MECH_RELAY_TRIP
+    legend: RCP 4 FDR/Mech. Relay Trip
+    color: 1
+    blank: 0
+  - uid: 8ff6779b-970a-44d6-86de-795e2d57fb17
+    id: RCP_1_MCC_MAIN_POWER_LOSS
+    legend: RCP 1 MCC Main Power Loss
+    color: 1
+    blank: 0
+  - uid: c87b3c12-4c21-4506-94fc-acd427c8c6da
+    id: RCP_2_MCC_MAIN_POWER_LOSS
+    legend: RCP 2 MCC Main Power Loss
+    color: 1
+    blank: 0
+  - uid: 5441f66b-f7ec-4220-a0da-e668dc7b8eab
+    id: RCP_3_MCC_MAIN_POWER_LOSS
+    legend: RCP 3 MCC Main Power Loss
+    color: 1
+    blank: 0
+  - uid: 36a94244-a95e-4179-808e-47eb67e5015c
+    id: RCP_4_MCC_MAIN_POWER_LOSS
+    legend: RCP 4 MCC Main Power Loss
+    color: 1
+    blank: 0
+  - uid: f77d57c9-621e-47d0-8849-c392a68f88f8
+    id: RCP_1_MCC_AUX_POWER_LOSS
+    legend: RCP 1 MCC Aux Power Loss
+    color: 0
+    blank: 0
+  - uid: acf21919-2536-4ae0-a0da-932b8b1904c8
+    id: RCP_2_MCC_AUX_POWER_LOSS
+    legend: RCP 2 MCC Aux Power Loss
+    color: 0
+    blank: 0
+  - uid: 55b5d07f-6294-4f45-86de-be81b9e73792
+    id: RCP_3_MCC_AUX_POWER_LOSS
+    legend: RCP 3 MCC Aux Power Loss
+    color: 0
+    blank: 0
+  - uid: f9ad1336-7ce7-41d5-af97-b11022743cf2
+    id: RCP_4_MCC_AUX_POWER_LOSS
+    legend: RCP 4 MCC Aux Power Loss
+    color: 0
+    blank: 0
+  - uid: 40460698-e78b-4607-bb77-e139d3d55c15
+    id: RCP_1_MCC_FDR_GROUND_FAULT
+    legend: RCP 1 MCC/FDR Ground Fault
+    color: 2
+    blank: 0
+  - uid: 49cf937e-226e-4dbe-8bc0-9fd85bf23bf1
+    id: RCP_2_MCC_FDR_GROUND_FAULT
+    legend: RCP 2 MCC/FDR Ground Fault
+    color: 2
+    blank: 0
+  - uid: 851000ea-f51b-45b5-bc82-c4a055fc6d5a
+    id: RCP_3_MCC_FDR_GROUND_FAULT
+    legend: RCP 3 MCC/FDR Ground Fault
+    color: 2
+    blank: 0
+  - uid: 65a5e3c8-588f-4a7e-b728-3a2db2ce925d
+    id: RCP_4_MCC_FDR_GROUND_FAULT
+    legend: RCP 4 MCC/FDR Ground Fault
+    color: 2
+    blank: 0
+  - uid: a45c10c5-1c24-404c-bdb9-f6b132156380
+    id: RCP_1_LUBE_SYSTEM_TROUBLE
+    legend: RCP 1 Lube System Trouble
+    color: 1
+    blank: 0
+  - uid: ff33091c-9d01-4cc3-81f0-c327d272ddec
+    id: RCP_2_LUBE_SYSTEM_TROUBLE
+    legend: RCP 2 Lube System Trouble
+    color: 1
+    blank: 0
+  - uid: d478c261-bb11-4b39-b268-96a8e078f91c
+    id: RCP_3_LUBE_SYSTEM_TROUBLE
+    legend: RCP 3 Lube System Trouble
+    color: 1
+    blank: 0
+  - uid: 4fb7e6da-1248-4b98-bd75-6fbb5477661c
+    id: RCP_4_LUBE_SYSTEM_TROUBLE
+    legend: RCP 4 Lube System Trouble
+    color: 1
+    blank: 0
+  - uid: baf9b939-eb8d-4c64-822d-de611eb44d1d
+    id: NBUS_1_POWER_LOSS
+    legend: NBUS-1 Power Loss
+    color: 1
+    blank: 0
+  - uid: 607da667-75c6-43ce-a356-54fa709a8f06
+    id: NBUS_2_POWER_LOSS
+    legend: NBUS-2 Power Loss
+    color: 1
+    blank: 0
+  - uid: 92b7aa2e-ff13-4c4f-8dbb-3291bdc0dbab
+    id: 
+    legend: 
+    color: 0
+    blank: 0
+  - uid: 5a6f5fdb-2335-4f68-8ed3-f973e3b0ced2
+    id: 
+    legend: 
+    color: 0
+    blank: 0
+  - uid: 212eb605-8a46-4d87-a835-e2a44287bbf0
+    id: 
+    legend: 
+    color: 0
+    blank: 0
+  - uid: 27906ad8-d2b9-425c-b2d7-a3076726a0f5
+    id: 
+    legend: 
+    color: 0
+    blank: 0
+  - uid: 7def3abd-c47a-456b-9463-3db7e25437dc
+    id: 
+    legend: 
+    color: 0
+    blank: 0
+  - uid: 7aa73621-89bf-40eb-bf6b-027ff6953b57
+    id: 
+    legend: 
+    color: 0
+    blank: 0
+  - uid: b7e07c52-5ed7-43a6-955c-b495b92aef3a
+    id: 
+    legend: 
+    color: 0
+    blank: 0
+  - uid: 3924eb58-e323-4575-a386-2390487f21a4
+    id: 
+    legend: 
+    color: 0
+    blank: 0
+  - uid: d904da2c-0b3f-4d33-8271-4a7bf038c1fb
+    id: 
+    legend: 
+    color: 0
+    blank: 0
+  - uid: b10bb466-009a-4210-805d-cad88c0a580c
+    id: 
+    legend: 
+    color: 0
+    blank: 0
+  - uid: 60cb0ef6-378f-4c1d-8a63-52e8bce3c528
+    id: 
+    legend: 
+    color: 0
+    blank: 0
+  - uid: a7e5d08d-8d26-4ed6-a9d5-19be6bc3ea3f
+    id: 
+    legend: 
+    color: 0
+    blank: 0
+  - uid: 2bd8729b-7223-4060-a82b-a3de5c82bb07
+    id: 
+    legend: 
+    color: 0
+    blank: 0
+  - uid: 425681e4-522a-4c26-a15a-5b86a4ed4be8
+    id: 
+    legend: 
+    color: 0
+    blank: 0
+  - uid: 4098bd72-2216-4fce-bde2-7bdc55ef98da
+    id: 
+    legend: 
+    color: 0
+    blank: 0
+  - uid: bd3acdab-726f-4e7f-90bf-a837e4c45cac
+    id: 
+    legend: 
+    color: 0
+    blank: 0
+  - uid: e7e11239-5b9b-40f4-ac3e-fe64f4a34b11
+    id: 
+    legend: 
+    color: 0
+    blank: 0
+  - uid: ec061714-8477-4b5d-bf4f-d73fbb1c9833
+    id: 
+    legend: 
+    color: 0
+    blank: 0
+  - uid: 4e357973-8ac4-48e0-91ab-d0c2575a125b
+    id: 
+    legend: 
+    color: 0
+    blank: 0
+  - uid: 994aa842-4c53-469f-925d-fb25f934db87
+    id: 
+    legend: 
+    color: 0
+    blank: 0
+  - uid: 23947de6-bf03-463b-a1dc-e5c97faa6005
+    id: 
+    legend: 
+    color: 0
+    blank: 0
+  - uid: 869f097d-de5b-4a4c-9b65-e9ce2c338b06
+    id: 
+    legend: 
+    color: 0
+    blank: 0
+  tilesCellsX: 8
+  labelsCsv: {fileID: 4900000, guid: bb62e8bd59d495f44b4d6cbf8a298c39, type: 3}
+  colorsCsv: {fileID: 4900000, guid: 3508a7a72b987c242991878d0ed857a0, type: 3}
+  resizeToCsv: 1
+  generatedPrefab: {fileID: 7049667964947990764, guid: 374456ff34987ad4bb1ab24a6b4a24b6, type: 3}
+  bodyMesh: {fileID: 4300000, guid: c9e371f58a1790d4b825244d1ee5aec9, type: 2}
+  lensMesh: {fileID: 4300000, guid: 81367a5e622740d4b9b78df898f7f108, type: 2}

@@ -7,16 +7,16 @@ import sys
 import threading
 import time
 
+from ann_panel_test import AnnPanelTest   # TEMPORARY: panel-wide flash test
+from annunciator_sim import AnnunciatorSimulation
 from cr_data import *
 from rcp_sim import RcpSimulation
+from rcs_thermal import RcsThermalSimulation
+from rod_sim import RodSimulation
 from turbine_sim import TurbineSimulation
 from valve_sim import ValveSimulation
 import api
-
-if sys.platform == "win32":
-    import msvcrt
-else:
-    msvcrt = None
+import commands
 
 BASE_DIR = Path(__file__).parent
 INDEX_FILE = BASE_DIR / "index.html"
@@ -208,7 +208,36 @@ def parse_args():
     parser.add_argument("--port", type=int, default=8000)
     parser.add_argument("--no-sim", action="store_true",
                         help="don't run the test simulations")
+    parser.add_argument("--ann-test", action="store_true",
+                        help="TEMPORARY: flash every labeled annunciator window "
+                             "(ann_panel_test.py). Masks the real alarms, so it "
+                             "is off unless you ask for it")
     return parser.parse_args()
+
+
+def console():
+    """Read commands off stdin until told to stop.
+
+    Blocking on stdin is fine - the HTTP server and every simulation are on
+    their own threads. Returning ends the server, so a quit word returns and
+    EOF does not: a server started with nothing on stdin (a service, nohup)
+    would otherwise shut down the moment it came up. Piped input therefore
+    runs its commands and then leaves the server up, same as a terminal.
+    """
+    if sys.stdin is not None:
+        for line in sys.stdin:
+            line = line.strip()
+            if not line:
+                continue
+            if line.lstrip("/").lower() in commands.QUIT_WORDS:
+                return
+            answer = commands.dispatch(line)
+            if answer:
+                print(answer, flush=True)
+
+    print("Console closed; serving until interrupted.", flush=True)
+    while True:
+        time.sleep(0.5)
 
 
 def main():
@@ -218,36 +247,39 @@ def main():
 
     sims = []
     if not args.no_sim:
-        # Valves before the turbine: the turbine's demand is a valve position.
-        sims = [RcpSimulation(), ValveSimulation(), TurbineSimulation()]
+        # Valves before the turbine: the turbine's demand is a valve position,
+        # and the rods chase the load the turbine makes of it. RCS temperatures
+        # after the rods and the pumps, because they are power over flow.
+        # Annunciators last - they alarm on what everything else has written.
+        sims = [RcpSimulation(), ValveSimulation(), TurbineSimulation(),
+                RodSimulation(), RcsThermalSimulation(), AnnunciatorSimulation()]
+        # TEMPORARY, and now opt-in: it drives every dark labeled window to
+        # alarm, which buries the RCP alarms the console is there to raise.
+        if args.ann_test:
+            sims.append(AnnPanelTest())
         for sim in sims:
             sim.start()
 
     display_host = "localhost" if manager.host in {"127.0.0.1", "0.0.0.0", "::"} else manager.host
     print(f"Serving on http://{display_host}:{manager.port}")
     if sims:
-        print("Test simulations running (4 RCPs, turbine + bypass valves, "
-              "turbine run-up; --no-sim to disable).")
+        print("Simulations running (4 RCPs with their electrical supply, turbine "
+              "+ bypass valves, turbine run-up, rod control and the temporary "
+              "reactor power model, RCS temperatures, annunciators; "
+              "--no-sim to disable).")
+    if args.ann_test:
+        print("TEMPORARY: every labeled annunciator window flashes on client "
+              "load (ann_panel_test.py).")
     print("Open the control page at http://localhost:<port>/ to change settings.")
-    print("Press 'e' then Enter in this terminal to stop the server.")
+    print("Type /help for the console commands, or 'e' to stop the server.")
 
-    while True:
-        if msvcrt is not None:
-            if msvcrt.kbhit():
-                key = msvcrt.getch().lower()
-                if key == b"e":
-                    print("\nStopping server...")
-                    manager.stop()
-                    break
-        else:
-            try:
-                time.sleep(0.1)
-            except KeyboardInterrupt:
-                print("\nStopping server...")
-                manager.stop()
-                break
+    try:
+        console()
+    except KeyboardInterrupt:
+        pass
 
-        time.sleep(0.05)
+    print("\nStopping server...")
+    manager.stop()
 
     for sim in sims:
         sim.stop()

@@ -1,6 +1,13 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 
+// Turns clicks into interactions: raycast from the camera, hand the hit to
+// whatever IInteractable sits on (or above) the collider.
+//
+// Both edges of the click are dispatched, because spring-return switches and
+// momentary buttons need the release as much as the press. The control pressed
+// is remembered and released, wherever the player is looking by then - in the
+// room your hand stays on the switch while you look somewhere else.
 public class InteractionManager : MonoBehaviour
 {
     [SerializeField] private Camera    _camera;
@@ -9,13 +16,18 @@ public class InteractionManager : MonoBehaviour
 
     private InputAction _clickAction;
 
+    // The spring-return control the mouse button is currently down on, if any.
+    private IHoldInteractable _held;
+
     private void Awake()
     {
         _clickAction = new InputAction(
             type: InputActionType.Button,
             binding: "<Mouse>/leftButton");
 
-        _clickAction.performed += HandleClick;
+        // A Button action performs on press and cancels on release.
+        _clickAction.performed += HandlePress;
+        _clickAction.canceled  += HandleRelease;
         _clickAction.Enable();
 
         Cursor.lockState = CursorLockMode.Locked;
@@ -24,7 +36,8 @@ public class InteractionManager : MonoBehaviour
 
     private void OnDestroy()
     {
-        _clickAction.performed -= HandleClick;
+        _clickAction.performed -= HandlePress;
+        _clickAction.canceled  -= HandleRelease;
         _clickAction.Disable();
     }
 
@@ -38,16 +51,41 @@ public class InteractionManager : MonoBehaviour
         }
     }
 
-    private void HandleClick(InputAction.CallbackContext _)
+    private void HandlePress(InputAction.CallbackContext _)
     {
+        // A press with something still held means the release went missing
+        // (focus lost mid-click, say). Let go of it rather than leaving a
+        // switch held down by nobody.
+        ReleaseHeld();
+
         var ray = _camera.ScreenPointToRay(Mouse.current.position.ReadValue());
 
-        if (Physics.Raycast(ray, out RaycastHit hit, _maxDistance, _interactableLayer))
-        {
-            if (hit.collider.GetComponentInParent<Rot2p>() is { } sw2)
-                sw2.OnInteract(hit.point);
-            else if (hit.collider.GetComponentInParent<Rot3p>() is { } sw3)
-                sw3.OnInteract(hit.point);
-        }
+        if (!Physics.Raycast(ray, out RaycastHit hit, _maxDistance, _interactableLayer))
+            return;
+
+        var control = hit.collider.GetComponentInParent<IInteractable>();
+        if (control == null)
+            return;
+
+        control.OnInteract(hit.point);
+
+        // Latching controls are done at this point; the rest are held until the
+        // button comes up.
+        _held = control as IHoldInteractable;
+    }
+
+    private void HandleRelease(InputAction.CallbackContext _) => ReleaseHeld();
+
+    private void ReleaseHeld()
+    {
+        if (_held == null)
+            return;
+
+        // Interface references don't get Unity's destroyed-object ==, so check
+        // through the component.
+        if (_held is MonoBehaviour behaviour && behaviour != null)
+            _held.OnRelease();
+
+        _held = null;
     }
 }

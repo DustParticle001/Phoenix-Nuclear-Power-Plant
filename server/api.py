@@ -10,7 +10,8 @@ Read (GET):
 Write (POST, JSON bodies):
 
     /api/io/report  the client's periodic switch report; answers with its diff
-    /api/io/set     server-authoritative write to gauges/indicators/switches
+    /api/io/set     server-authoritative write to gauges/indicators/switches/
+                    annunciators
     /api/io/save    persist current I/O values to data/io_definitions.json
 
 The template lives in data/control_room_template.json and is re-read per
@@ -161,23 +162,32 @@ def io_report(body):
 
     outcome = state.apply_report(body.get("switches"), client_id=client_id, since=since)
 
+    # Annunciators are outputs, so the client reports definitions rather than
+    # state: the windows its racks hold, sent only while the server has no
+    # definition for them. Their uids join the switch ones in the same lists.
+    windows = state.register_annunciators(body.get("annunciators"), client_id=client_id)
+
     payload = state.changes_since(since, exclude_client=client_id)
     payload["accepted"] = outcome["accepted"]
     payload["rejected"] = outcome["rejected"]
-    payload["unknown"] = outcome["unknown"]
-    payload["registered"] = outcome["registered"]
+    payload["unknown"] = outcome["unknown"] + windows["unknown"]
+    payload["registered"] = outcome["registered"] + windows["registered"]
     return payload
 
 
 def io_set(body):
-    """Server-authoritative write. Any of switches / indicators / gauges.
+    """Server-authoritative write. Any of switches / indicators / gauges /
+    annunciators.
 
         {"gauges": [{"uid": "...", "value": 47.5}],
          "indicators": [{"uid": "...", "state": "red", "flashing": true}],
-         "switches": [{"uid": "...", "position": "on"}]}
+         "switches": [{"uid": "...", "position": "on"}],
+         "annunciators": [{"id": "RCP_1_TRIP", "state": "alarm", "flashing": true}]}
 
     Unknown uids come back in "unknown" - this endpoint writes to definitions,
-    it doesn't create them (define_* in io_state.py does that).
+    it doesn't create them (define_* in io_state.py does that). Annunciators
+    may be addressed by "id" instead of "uid": tile uids are GUIDs from the
+    client's rack definition, the id is the legend slug you can actually type.
     """
     changed, unknown = [], []
 
@@ -202,6 +212,18 @@ def io_set(body):
             unknown.append(uid)
         elif state.set_gauge(uid, value=item.get("value"), valid=item.get("valid")):
             changed.append(uid)
+
+    for item in _entries(body, "annunciators"):
+        ident = item.get("uid") or item.get("id")
+        window = state.find_annunciator(ident)
+        if window is None:
+            unknown.append(ident)
+        elif state.set_annunciator(window["uid"], state=item.get("state"),
+                                   flashing=item.get("flashing"),
+                                   flash_rate=item.get("flashRate"),
+                                   acknowledged=item.get("acknowledged"),
+                                   silenced=item.get("silenced")):
+            changed.append(window["uid"])
 
     return {"revision": state.revision, "changed": changed, "unknown": unknown}
 

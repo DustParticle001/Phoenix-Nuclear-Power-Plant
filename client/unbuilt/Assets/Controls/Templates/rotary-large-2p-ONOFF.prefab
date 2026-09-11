@@ -616,7 +616,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: 510121fee08d09c4992ffc4ee0338e63, type: 3}
       propertyPath: m_Name
-      value: pg-2p-switch-template
+      value: rotary-large-2p-ONOFF
       objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: 510121fee08d09c4992ffc4ee0338e63, type: 3}
       propertyPath: m_Layer
@@ -638,9 +638,6 @@ PrefabInstance:
       insertIndex: -1
       addedObject: {fileID: 2405053320528735603}
     m_AddedComponents:
-    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 510121fee08d09c4992ffc4ee0338e63, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 4428901389395552312}
     - targetCorrespondingSourceObject: {fileID: -1817752537321972114, guid: 510121fee08d09c4992ffc4ee0338e63, type: 3}
       insertIndex: -1
       addedObject: {fileID: 2981062910894174964}
@@ -671,41 +668,11 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 8.041076, y: 4, z: 9.032639}
   m_Center: {x: -0.037164968, y: 1.9999995, z: 0.4838027}
---- !u!4 &5804112356979837484 stripped
-Transform:
-  m_CorrespondingSourceObject: {fileID: -9131937924057300203, guid: 510121fee08d09c4992ffc4ee0338e63, type: 3}
-  m_PrefabInstance: {fileID: 5893118136065493305}
-  m_PrefabAsset: {fileID: 0}
 --- !u!4 &6215590658701651666 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 510121fee08d09c4992ffc4ee0338e63, type: 3}
   m_PrefabInstance: {fileID: 5893118136065493305}
   m_PrefabAsset: {fileID: 0}
---- !u!1 &6704142860500186216 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: 510121fee08d09c4992ffc4ee0338e63, type: 3}
-  m_PrefabInstance: {fileID: 5893118136065493305}
-  m_PrefabAsset: {fileID: 0}
---- !u!114 &4428901389395552312
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6704142860500186216}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d7db7c114821b964684cd46c3e1f73c6, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Rot2p
-  _definition: {fileID: 0}
-  _handle: {fileID: 5804112356979837484}
-  _defaultOn: 0
-  _splitAxis: 2
-  _invertSides: 1
-  _onRotation: {x: 0, y: 0, z: 0}
-  _offRotation: {x: 0, y: -90, z: 0}
-  _speed: 12
 --- !u!1001 &6989194760460837539
 PrefabInstance:
   m_ObjectHideFlags: 0

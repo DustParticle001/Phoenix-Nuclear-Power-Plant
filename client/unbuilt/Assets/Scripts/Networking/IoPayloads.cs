@@ -33,6 +33,24 @@ public class IoIndicatorEntry
 }
 
 [Serializable]
+public class IoAnnunciatorEntry
+{
+    public string uid;
+    public string id;         // readable, e.g. RCP_1_TRIP - what a sim names it by
+    public string name;
+    public string text;       // legend, as printed on the window
+    public string color;      // lens colour: white / amber / xred / ...
+    public string group;      // flash group the client registered it under
+    public string sartGroup;  // which SART cluster commands it; "" = master only
+    public string state;      // "clear" / "off" / "normal" = dark, anything else lit
+    public bool flashing;
+    public string flashRate;  // "announce" (fast, unacknowledged alarm) or "clear" (slow ringback)
+    public bool acknowledged; // server-side bookkeeping; the client doesn't read it
+    public bool silenced;     // SILENCE was pressed on it: still flashing, no longer audible
+    public int revision;
+}
+
+[Serializable]
 public class IoGaugeEntry
 {
     public string uid;
@@ -59,6 +77,7 @@ public class IoSyncPayload
     public IoSwitchEntry[] switches;
     public IoIndicatorEntry[] indicators;
     public IoGaugeEntry[] gauges;
+    public IoAnnunciatorEntry[] annunciators;
 
     // Report outcome (absent on a plain GET).
     public string[] accepted;
@@ -78,10 +97,27 @@ public class IoSwitchReport
     public string position;
 }
 
+// One annunciator window in a report. Definition only: a window is an output,
+// so the client has nothing to say about its state - this only tells a server
+// that doesn't know the window yet that it exists, and what it looks like.
+[Serializable]
+public class IoAnnunciatorReport
+{
+    public string uid;
+    public string id;
+    public string name;
+    public string text;
+    public string color;
+    public string group;
+    public string sartGroup;
+}
+
 [Serializable]
 public class IoReportRequest
 {
     public string clientId;
     public int since;
     public IoSwitchReport[] switches;
+    // Only windows the server hasn't registered yet - empty once it has them.
+    public IoAnnunciatorReport[] annunciators;
 }

@@ -27,7 +27,8 @@ FINE_RATE = 0.1      # turbine valve, "Close" fine - a vernier, not a stroke:
                      # 8 RPM of speed demand or 2.3 MW of load per second held
 BYPASS_RATE = 5.0    # bypass valve                - 20 s
 
-TICK_SECONDS = 0.1
+TICK_SECONDS = 0.005    # TEMPORARY: 0.1 normally, matching the turbine's - the
+                        # valve is the turbine's demand, so it wants the same rate
 
 # Which way each switch position drives the valve. Anything else (centre)
 # holds; the switch's own position list is the authority on what's valid.

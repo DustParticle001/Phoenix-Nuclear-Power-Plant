@@ -18,8 +18,6 @@ public class GaugeNeedle : MonoBehaviour
     [Header("Rotation Config")]
     [Tooltip("Local axis the needle rotates around. Negate it if the needle sweeps the wrong way.")]
     [SerializeField] private Vector3 _rotationAxis = Vector3.forward;
-    [Tooltip("Seconds the needle takes to catch up with a moved target. Keep it a touch above the server sync interval so stepped values blend into one sweep.")]
-    [SerializeField] private float _smoothTime = 0.35f;
 
     [Header("Testing")]
     [Tooltip("While enabled, the needle follows Test Value instead of SetValue calls.")]
@@ -37,6 +35,21 @@ public class GaugeNeedle : MonoBehaviour
     // shortest way between two readings is the way the pointer really travels.
     private float _sweep;
     private bool _wraps;
+
+    // Fallback for a needle with no definition assigned: rigid, so it reads
+    // exactly what it is given rather than inventing a lag nobody asked for.
+    private const float DefaultResponse = 0.02f;
+
+    // How long the pointer takes to catch a step change. This is the
+    // INSTRUMENT, not the signal: the server can step a value as sharply as it
+    // likes and a real pointer still has a pivot, a spring and damping to get
+    // there through. It used to be a per-needle Inspector value that had to be
+    // set high enough to blend stepped setpoints into one sweep - at the sync
+    // rate this now runs at there are no steps left to blend, so it went back
+    // to being what it physically is: a property of the instrument, and so of
+    // the definition that describes it.
+    private float Response =>
+        _definition != null ? Mathf.Max(0f, _definition.needleResponse) : DefaultResponse;
 
     private void Awake()
     {
@@ -76,7 +89,7 @@ public class GaugeNeedle : MonoBehaviour
         // setpoints a few times a second, and a lerp converges before the next
         // one lands — the needle steps. SmoothDamp keeps its velocity across
         // setpoint changes, so a stream of steps reads as one continuous sweep.
-        _currentAngle = Mathf.SmoothDamp(_currentAngle, _targetAngle, ref _angleVelocity, _smoothTime);
+        _currentAngle = Mathf.SmoothDamp(_currentAngle, _targetAngle, ref _angleVelocity, Response);
         Apply();
     }
 

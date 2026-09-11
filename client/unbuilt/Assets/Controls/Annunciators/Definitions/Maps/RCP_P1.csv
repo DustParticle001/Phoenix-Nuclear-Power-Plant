@@ -1,0 +1,4 @@
+RCP 1 Trip,RCP 2 Trip,RCP 3 Trip, RCP 4 Trip,RCP 1 FDR/Mech. Relay Trip,RCP 2 FDR/Mech. Relay Trip,RCP 3 FDR/Mech. Relay Trip,RCP 4 FDR/Mech. Relay Trip
+RCP 1 MCC Main Power Loss,RCP 2 MCC Main Power Loss,RCP 3 MCC Main Power Loss,RCP 4 MCC Main Power Loss,RCP 1 MCC Aux Power Loss,RCP 2 MCC Aux Power Loss,RCP 3 MCC Aux Power Loss,RCP 4 MCC Aux Power Loss
+RCP 1 MCC/FDR Ground Fault,RCP 2 MCC/FDR Ground Fault,RCP 3 MCC/FDR Ground Fault,RCP 4 MCC/FDR Ground Fault,RCP 1 Lube System Trouble,RCP 2 Lube System Trouble,RCP 3 Lube System Trouble,RCP 4 Lube System Trouble
+NBUS-1 Power Loss,NBUS-2 Power Loss,,,,,,

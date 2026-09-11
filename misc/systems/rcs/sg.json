@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "system": "RCS",
   "unit": "SG",
-  "name": "Steam Generator (primary side only - secondary deferred)",
+  "name": "Steam Generator, Model F class (primary side only - secondary deferred)",
   "instances": ["SG1", "SG2", "SG3", "SG4"],
   "instanceParams": {
     "SG1": { "loop": 1 },
@@ -10,7 +10,7 @@
     "SG3": { "loop": 3 },
     "SG4": { "loop": 4 }
   },
-  "notes": "US EPR FSAR Ch 5.4-derived; numerics approx. SCOPE decided 2026-07-10: primary side only (channel-head plena + tube bundle) so the reactor-SG-RCP-reactor loop is closed. The whole secondary side (shell, level/pressure, FW/EFW nozzles, MSSVs, MSRT, MSIV, blowdown, N16 monitor) is DEFERRED and will be added to this file later - modeled here only as the external:SG{n}-SEC heat sink. Tube bundle lives here (not loop.json) so the SGTR primary-to-secondary coupling stays in one file. MSSVs will be modeled as separate devices (2 per line + 1 MSRT), decided 2026-07-10.",
+  "notes": "REBASED 2026-09-06 from US EPR to a late-1990s Westinghouse 4-loop PWR. The primary side is a straight lift - channel head, partition plate, inverted U-tube bundle and the SGTR states are identical in kind. Only the numbers and the deferred secondary-side plan changed. Originally US EPR FSAR Ch 5.4-derived; numerics approx. SCOPE decided 2026-07-10: primary side only (channel-head plena + tube bundle) so the reactor-SG-RCP-reactor loop is closed. The whole secondary side (shell, level/pressure, FW/EFW nozzles, MSSVs, MSRT, MSIV, blowdown, N16 monitor) is DEFERRED and will be added to this file later - modeled here only as the external:SG{n}-SEC heat sink. Tube bundle lives here (not loop.json) so the SGTR primary-to-secondary coupling stays in one file. Secondary relief for a W 4-loop is FIVE code safety valves per steam line plus one power-operated atmospheric relief valve, with MSIVs and their bypasses and steam dump to the condenser. The EPR arrangement this file originally planned (2 MSSVs per line + 1 MSRT with its own isolation valve) does not exist here - there is no MSRT. Also decide whether the chosen SG model has a feedwater preheater/economizer (Model D does, Model F does not) - the EPR axial economizer is not it. Revised 2026-09-06.",
 
   "devices": [
     {
@@ -34,8 +34,8 @@
       "states": ["ok", "leak", "rupture"],
       "initialState": "ok",
       "actuation": ["auto"],
-      "behavior": "Inverted U-tube bundle: primary water flows up and back down inside the tubes, boiling secondary water on the shell side. THE primary/secondary boundary. 'leak' = small primary-to-secondary leakage (within tech-spec limits, slow secondary activity rise); 'rupture' = SGTR: one or more tubes severed, primary inventory blows into the secondary at full RCS-to-SG dP. Heat transfer scales with primary flow, primary-secondary dT, and tube condition. Secondary-side detection (N16, activity) arrives with the deferred secondary model.",
-      "params": { "tubeCount": 5980, "heatDutyMWt": 1125, "designPressurePrimaryBar": 176, "approx": true }
+      "behavior": "Inverted U-tube bundle, Model F class (6,633 tubes). Tube count is strongly plant- and model-specific: Model 51 has ~3,388, Model D5 ~4,578, Model F ~6,633, and replacement Delta-75/76 bundles differ again - pick the model when you pick the reference plant.  primary water flows up and back down inside the tubes, boiling secondary water on the shell side. THE primary/secondary boundary. 'leak' = small primary-to-secondary leakage (within tech-spec limits, slow secondary activity rise); 'rupture' = SGTR: one or more tubes severed, primary inventory blows into the secondary at full RCS-to-SG dP. Heat transfer scales with primary flow, primary-secondary dT, and tube condition. Secondary-side detection (N16, activity) arrives with the deferred secondary model.",
+      "params": { "tubeCount": 6633, "heatDutyMWt": 860, "designPressurePrimaryBar": 171, "designPressurePrimaryPSIA": 2485, "operatingPressurePSIA": 2250, "approx": true }
     },
     {
       "id": "SG{n}-PRI-OUT",

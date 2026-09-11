@@ -1,0 +1,610 @@
+{
+  "schemaVersion": 1,
+  "system": "EPS",
+  "unit": "OFFSITE",
+  "name": "Offsite and unit auxiliary power (switchyard to 6.9 kV bus incomers)",
+  "instances": ["NBUS-1", "NBUS-2"],
+  "instanceParams": {
+    "NBUS-1": { "uat": 1, "rcps": ["RCP1", "RCP2"] },
+    "NBUS-2": { "uat": 2, "rcps": ["RCP3", "RCP4"] }
+  },
+  "notes": "REBASED 2026-09-06: plant reference changed from US EPR to a late-1990s Westinghouse 4-loop PWR. Replaces the old rcp.json upstream chain (SWYD-400KV -> NAT-1/2 -> NBUS-1/2), which fed house load straight from the grid and had no generator connection. US practice: the unit feeds its own auxiliaries from its own generator through unit auxiliary transformers tapped off the isolated phase bus, with a reserve transformer off the switchyard as the offsite source, and an automatic scheme that swings each bus from one to the other. SCOPE: offsite only. Onsite power (4.16 kV Class 1E buses, EDGs, 480 V load centers/MCCs, AAC diesel) is NOT designed yet - see eps/onsite.json when it lands. NBUS-{n} is defined here so this file is self-contained and drawable, tagged migrateTo EPS-ONSITE. DESIGN FORK TAKEN: this plant HAS a generator breaker (already implemented client-side as the 'Gen Breaker' switch), so the UATs sit on the generator side of it, startup power comes from the RAT, and the operator performs a manual live-parallel back-transfer to normal after synchronizing. At plants without a generator breaker auxiliaries backfeed from the grid through the MSUT and no startup transfer is needed. NAMING EXCEPTION: MSUT/UAT/RAT keep their universal industry names instead of the feeds-rule -XFMR form, so they match UFSAR Ch 8 wording - see _schema.md. All numerics approx pending a real UFSAR Ch 8 (Watts Bar, Vogtle, Callaway, Comanche Peak, Seabrook are public). Switchyard modeled as a single node - ring bus / breaker-and-a-half detail deferred. All MCR controls here are LATCHING (Rot2p/Rot3p) and use the out-of-correspondence convention; no spring-return controller exists yet.",
+
+  "devices": [
+    {
+      "id": "SWYD-345KV",
+      "name": "345kV switchyard (grid source)",
+      "kind": "bus",
+      "location": "switchyard",
+      "visibility": "hidden",
+      "states": ["energized", "deenergized"],
+      "initialState": "energized",
+      "actuation": ["auto"],
+      "behavior": "Grid connection and the plant's offsite power source. Feeds RAT directly and receives unit output through MSUT. Deenergized = loss of offsite power: RAT dies, and if the generator is not carrying the house load the normal buses go dead and the RCPs coast down on their flywheels. Single node - individual switchyard breakers, the ring bus and the second incoming line are deferred.",
+      "params": { "voltageKV": 345, "approx": true }
+    },
+    {
+      "id": "MSUT",
+      "name": "Main step-up transformer (MSUT, generator to switchyard)",
+      "kind": "transformer",
+      "location": "transformer-yard",
+      "visibility": "hidden",
+      "states": ["in-service", "faulted", "isolated"],
+      "initialState": "in-service",
+      "actuation": ["auto", "local"],
+      "behavior": "Steps generator voltage up to the switchyard. Carries the full unit output outbound; with GEN-52 closed and the generator off the line it also backfeeds the isolated phase bus from the grid, which keeps the UATs alive. Faulted isolates the unit from the grid entirely: no export path and no backfeed. Its own protection (87T, sudden pressure) is deferred to the turbine-generator file.",
+      "params": { "primaryKV": 22, "secondaryKV": 345, "approx": true }
+    },
+    {
+      "id": "GEN-52",
+      "name": "Generator breaker (GEN-52)",
+      "kind": "breaker",
+      "location": "turbine-hall",
+      "visibility": "mcr",
+      "states": ["open", "closed", "tripped"],
+      "initialState": "open",
+      "actuation": ["auto", "mcr", "local"],
+      "behavior": "Ties the isolated phase bus to MSUT and thus the switchyard. Closed by the operator at the end of the synchronizing sequence (synchroscope + sync-check), opened on generator or turbine trip. Its trip contact is the fast-transfer initiate signal for both normal buses. Already implemented client-side as the 'Gen Breaker' switch; the synchronizing sequence itself belongs to the turbine-generator file. At plants with no generator breaker the same function sits on the switchyard line breaker - identical from the panel.",
+      "params": {}
+    },
+    {
+      "id": "IPB",
+      "name": "Isolated phase bus (generator / MSUT / UAT node)",
+      "kind": "bus",
+      "location": "turbine-hall",
+      "visibility": "hidden",
+      "states": ["energized", "deenergized"],
+      "initialState": "deenergized",
+      "actuation": ["auto"],
+      "behavior": "Generator-voltage bus between the generator terminals, the UAT taps and GEN-52. THE node that makes the plant feed itself: energized when the generator is excited, or backfed from the grid when GEN-52 is closed with the generator off the line. Dies when the generator trips and GEN-52 opens - which is the event the whole transfer scheme exists to catch.",
+      "params": { "voltageKV": 22, "approx": true }
+    },
+    {
+      "id": "UAT-{uat}",
+      "name": "Unit auxiliary transformer {uat} (UAT-{uat}, feeds NBUS-{uat})",
+      "kind": "transformer",
+      "location": "transformer-yard",
+      "visibility": "hidden",
+      "expand": { "uat": [1, 2] },
+      "states": ["in-service", "faulted", "isolated"],
+      "initialState": "in-service",
+      "actuation": ["auto", "local"],
+      "behavior": "Taps the isolated phase bus on the GENERATOR side of GEN-52 and steps 22kV down to 6.9kV for its normal bus. The normal source at power - the unit supplies its own auxiliaries. In-service but dead whenever IPB is dead (generator offline and GEN-52 open), which is why startup runs on the reserve transformer. Internal fault picks up UAT-{uat}-PROT and locks out, holding the normal incomer open until the lockout is reset locally.",
+      "params": { "primaryKV": 22, "secondaryKV": 6.9, "ratingMVA": 55, "approx": true }
+    },
+    {
+      "id": "UAT-{uat}-PROT",
+      "name": "UAT {uat} protection package (UAT-{uat}-87T/-51/-63)",
+      "kind": "relay",
+      "location": "switchgear",
+      "visibility": "hidden",
+      "expand": { "uat": [1, 2] },
+      "states": ["normal", "picked-up"],
+      "initialState": "normal",
+      "actuation": ["auto"],
+      "behavior": "87T transformer differential (instantaneous), 51 time overcurrent backup, 63 sudden-pressure from the tank. Any element latches UAT-{uat}-86. A UAT fault is both a trip and a transfer initiate: the bus must go to reserve, and it must NOT come back until the lockout is reset.",
+      "params": { "backupDelayS": 0.5, "approx": true }
+    },
+    {
+      "id": "UAT-{uat}-86",
+      "name": "UAT {uat} lockout relay (UAT-{uat}-86)",
+      "kind": "relay",
+      "location": "switchgear",
+      "visibility": "hidden",
+      "expand": { "uat": [1, 2] },
+      "states": ["reset", "lockout"],
+      "initialState": "reset",
+      "actuation": ["auto", "local"],
+      "behavior": "Latches on UAT-{uat}-PROT pickup: trips NBUS-{uat}-NORM-52, holds it open, initiates the fast transfer to reserve, and blocks any back-transfer. Manual local reset only, after the fault is investigated - so a UAT lockout parks the bus on reserve for the rest of the scenario.",
+      "params": {}
+    },
+    {
+      "id": "RAT",
+      "name": "Reserve auxiliary transformer (RAT, feeds RBUS)",
+      "kind": "transformer",
+      "location": "transformer-yard",
+      "visibility": "hidden",
+      "states": ["in-service", "faulted", "isolated"],
+      "initialState": "in-service",
+      "actuation": ["auto", "local"],
+      "behavior": "Fed directly from the switchyard, steps 345kV down to 6.9kV onto the reserve bus. The offsite source: startup and shutdown power, and the destination of every automatic transfer. Normally energized with both reserve incomers open (hot standby). Single RAT is deliberate - it makes the reserve path a genuine single point of failure, so a RAT lockout plus a generator trip is a real station blackout path rather than a bookkeeping exercise.",
+      "params": { "primaryKV": 345, "secondaryKV": 6.9, "ratingMVA": 55, "approx": true }
+    },
+    {
+      "id": "RAT-PROT",
+      "name": "RAT protection package (RAT-87T/-51/-63)",
+      "kind": "relay",
+      "location": "switchgear",
+      "visibility": "hidden",
+      "states": ["normal", "picked-up"],
+      "initialState": "normal",
+      "actuation": ["auto"],
+      "behavior": "87T differential, 51 backup overcurrent, 63 sudden pressure on the reserve transformer. Pickup latches RAT-86.",
+      "params": { "backupDelayS": 0.5, "approx": true }
+    },
+    {
+      "id": "RAT-86",
+      "name": "RAT lockout relay (RAT-86)",
+      "kind": "relay",
+      "location": "switchgear",
+      "visibility": "hidden",
+      "states": ["reset", "lockout"],
+      "initialState": "reset",
+      "actuation": ["auto", "local"],
+      "behavior": "Latches on RAT-PROT pickup: trips BOTH reserve incomers, deenergizes RBUS and blocks every automatic transfer on both buses. With the reserve path locked out, a subsequent generator trip loses all four RCPs. Manual local reset only.",
+      "params": {}
+    },
+    {
+      "id": "RBUS",
+      "name": "6.9kV reserve bus (RBUS)",
+      "kind": "bus",
+      "location": "switchgear",
+      "visibility": "hidden",
+      "states": ["energized", "deenergized"],
+      "initialState": "energized",
+      "actuation": ["auto"],
+      "behavior": "Reserve 6.9kV bar off the RAT secondary, tapped by the reserve incomer of every normal bus. Energized iff SWYD-345KV energized, RAT in-service and RAT-86 reset. Its health is the single thing that decides whether a fast transfer has anywhere to go.",
+      "params": { "voltageKV": 6.9, "approx": true }
+    },
+    {
+      "id": "NBUS-{n}-NORM-52",
+      "name": "Bus {n} normal incomer breaker (NBUS-{n}-NORM-52)",
+      "kind": "breaker",
+      "location": "switchgear",
+      "visibility": "mcr",
+      "states": ["open", "closed", "tripped"],
+      "initialState": "open",
+      "actuation": ["auto", "mcr", "local"],
+      "behavior": "Connects UAT-{uat} to NBUS-{n}. Closed for the whole run at power; open at startup because the generator is not yet carrying the house load. Tripped by the transfer scheme, by UAT-{uat}-86, or by the MCR control switch. Electrically interlocked with NBUS-{n}-RES-52: the pair may only be closed together momentarily, under sync-check supervision, during a manual back-transfer.",
+      "params": {}
+    },
+    {
+      "id": "NBUS-{n}-RES-52",
+      "name": "Bus {n} reserve incomer breaker (NBUS-{n}-RES-52)",
+      "kind": "breaker",
+      "location": "switchgear",
+      "visibility": "mcr",
+      "states": ["open", "closed", "tripped"],
+      "initialState": "closed",
+      "actuation": ["auto", "mcr", "local"],
+      "behavior": "Connects RBUS to NBUS-{n}. The startup lineup closes it; the automatic transfer closes it; the operator opens it at the end of a manual back-transfer. Tripped by RAT-86 or by its own overcurrent protection. Same interlock with NORM-52 - break-before-make for every automatic transfer.",
+      "params": {}
+    },
+    {
+      "id": "NBUS-{n}-VT",
+      "name": "Bus {n} voltage transformers (NBUS-{n}-VT)",
+      "kind": "sensor",
+      "location": "switchgear",
+      "visibility": "hidden",
+      "states": ["ok", "failed"],
+      "initialState": "ok",
+      "actuation": ["auto"],
+      "behavior": "VT set on NBUS-{n}. Feeds the 27 undervoltage elements, the 81 underfrequency element, one side of the 25 sync-check, and the panel voltmeter and frequency meter. Failed VTs are why a transfer scheme can sit blind while the bus dies - worth modeling as a casualty.",
+      "params": {}
+    },
+    {
+      "id": "NBUS-{n}-27",
+      "name": "Bus {n} undervoltage relays (NBUS-{n}-27)",
+      "kind": "relay",
+      "location": "switchgear",
+      "visibility": "hidden",
+      "states": ["normal", "degraded", "residual"],
+      "initialState": "normal",
+      "actuation": ["auto"],
+      "behavior": "Two elements on one device. 'degraded' at about 90% of nominal with a short delay: an independent fast-transfer initiate for cases where no trip contact arrives (a UAT fault the differential misses, an upstream open). 'residual' below about 30%: the permissive that lets a failed fast transfer fall back to a residual-voltage transfer once the coasting motors have stopped holding the bus up. Also drives the BUS UNDERVOLTAGE annunciator.",
+      "params": { "degradedPct": 90, "degradedDelayS": 0.05, "residualPct": 30, "approx": true }
+    },
+    {
+      "id": "NBUS-{n}-81",
+      "name": "Bus {n} underfrequency relay (NBUS-{n}-81)",
+      "kind": "relay",
+      "location": "switchgear",
+      "visibility": "hidden",
+      "states": ["normal", "picked-up"],
+      "initialState": "normal",
+      "actuation": ["auto"],
+      "behavior": "Underfrequency on an RCP bus. In a Westinghouse plant this is a hardwired REACTOR TRIP input (RCP bus underfrequency, above the low-power interlock) - the reactor is tripped before loop flow decays with a sagging grid, because the RCPs are fixed-speed and simply follow the bus. Pickup here alarms and hands the signal to the future RPS file; it does not trip anything in this file. This is what the 0-80 Hz frequency gauges are actually indicating.",
+      "params": { "pickupHz": 57.5, "delayS": 0.05, "approx": true }
+    },
+    {
+      "id": "NBUS-{n}-25",
+      "name": "Bus {n} incomer sync-check relay (NBUS-{n}-25)",
+      "kind": "relay",
+      "location": "switchgear",
+      "visibility": "hidden",
+      "states": ["blocked", "dead-bus-ok", "in-sync"],
+      "initialState": "dead-bus-ok",
+      "actuation": ["auto"],
+      "behavior": "Supervises closing either incomer against the other. Compares voltage, frequency and phase angle across the two sources. 'dead-bus-ok' when the bus or the incoming source is dead - close freely, which is the normal automatic case. 'in-sync' when both sides are live and matched, which is what permits the momentary parallel of a manual back-transfer (both sources are tied to the same grid through the MSUT, so they are normally in step). 'blocked' otherwise, and the close command is physically inhibited.",
+      "params": { "maxVoltDiffPct": 5, "maxSlipHz": 0.1, "maxAngleDeg": 10, "approx": true }
+    },
+    {
+      "id": "NBUS-{n}-XFER",
+      "name": "Bus {n} automatic transfer scheme (NBUS-{n}-XFER)",
+      "kind": "other",
+      "location": "switchgear",
+      "visibility": "mcr",
+      "states": ["normal", "reserve", "transferring", "blocked", "failed"],
+      "initialState": "reserve",
+      "actuation": ["auto", "mcr", "local"],
+      "behavior": "The state machine that swings NBUS-{n} between its two sources. Break-before-make in every automatic case: trip the normal incomer, confirm it open on the 52b contact, then close the reserve incomer. Fast transfer completes in about 5-10 cycles, quick enough that motors ride through on residual voltage. If the fast path is unavailable it falls back to a residual-voltage transfer once NBUS-{n}-27 reads 'residual'; if the reserve incomer will not close or RBUS is dead it goes to 'failed' and the bus stays dead. 'blocked' is the MCR mode selector in OFF - no automatic action at all, which is how you set up a dead bus deliberately. Back-transfer to normal is never automatic.",
+      "params": { "fastDeadTimeMs": 125, "fastDeadTimeRangeMs": [85, 170], "residualTimeoutS": 4, "approx": true }
+    },
+    {
+      "id": "NBUS-{n}",
+      "name": "6.9kV normal (non-1E) bus {n}",
+      "kind": "bus",
+      "location": "switchgear",
+      "visibility": "hidden",
+      "migrateTo": "EPS-ONSITE",
+      "states": ["energized", "deenergized"],
+      "initialState": "energized",
+      "actuation": ["auto"],
+      "behavior": "Each normal bus feeds two RCP electrical groups (RCP1&2 on NBUS-1, RCP3&4 on NBUS-2) plus the balance-of-plant loads and load-center transformers that the onsite file will own. Energized from exactly one incomer at a time: (NORM-52 closed AND UAT-{uat} in-service AND IPB energized) OR (RES-52 closed AND RBUS energized). NOT backed by the emergency diesels - losing one bus loses two RCPs, which is the two-loop low-flow reactor trip.",
+      "params": { "voltageKV": 6.9, "approx": true }
+    }
+  ],
+
+  "signals": [
+    { "id": "SWYD-VOLTS", "name": "Switchyard voltage", "type": "analog", "unit": "kV", "source": "SWYD-345KV", "range": [0, 400] },
+    { "id": "SWYD-FREQ", "name": "Grid frequency", "type": "analog", "unit": "Hz", "source": "SWYD-345KV", "range": [57, 63], "notes": "Already implemented client-side as the 'Grid Freq.' gauge, 57-63 Hz." },
+    { "id": "IPB-VOLTS", "name": "Isolated phase bus voltage", "type": "analog", "unit": "kV", "source": "IPB", "range": [0, 30] },
+    { "id": "RBUS-VOLTS", "name": "Reserve bus voltage", "type": "analog", "unit": "kV", "source": "RBUS", "range": [0, 8] },
+    { "id": "NBUS-{n}-VOLTS", "name": "Bus {n} voltage", "type": "analog", "unit": "kV", "source": "NBUS-{n}-VT", "range": [0, 8] },
+    { "id": "NBUS-{n}-FREQ", "name": "Bus {n} frequency", "type": "analog", "unit": "Hz", "source": "NBUS-{n}-VT", "range": [0, 80], "notes": "A real bus frequency meter is an expanded 55-65 Hz scale; 0-80 reuses the existing gauge asset and has the advantage of showing a dead bus decaying to zero." },
+    { "id": "GEN-52-POS", "name": "Generator breaker position", "type": "binary", "source": "GEN-52" },
+    { "id": "NBUS-{n}-NORM-52-POS", "name": "Bus {n} normal incomer position", "type": "binary", "source": "NBUS-{n}-NORM-52" },
+    { "id": "NBUS-{n}-RES-52-POS", "name": "Bus {n} reserve incomer position", "type": "binary", "source": "NBUS-{n}-RES-52" },
+    { "id": "NBUS-{n}-XFER-STATE", "name": "Bus {n} transfer scheme state", "type": "derived", "source": "NBUS-{n}-XFER" },
+    { "id": "NBUS-{n}-SOURCE", "name": "Bus {n} source (derived)", "type": "derived", "source": "logic", "expr": "NBUS-{n}-NORM-52 == closed ? normal : (NBUS-{n}-RES-52 == closed ? reserve : dead)" },
+    { "id": "NBUS-{n}-DEAD", "name": "Bus {n} dead (derived)", "type": "derived", "source": "logic", "expr": "NBUS-{n} == deenergized" },
+    { "id": "NBUS-{n}-XOC-NORM", "name": "Bus {n} normal incomer out of correspondence (derived)", "type": "derived", "source": "logic", "expr": "mcr:NBUS-{n}-NORM-52-CS == closed AND NBUS-{n}-NORM-52 != closed", "notes": "Latching-switch convention: the switch is a maintained request, so any trip leaves it disagreeing with the breaker. Drives the lamp mismatch and blocks reclosing until the switch is cycled." },
+    { "id": "NBUS-{n}-XOC-RES", "name": "Bus {n} reserve incomer out of correspondence (derived)", "type": "derived", "source": "logic", "expr": "mcr:NBUS-{n}-RES-52-CS == closed AND NBUS-{n}-RES-52 != closed" },
+    { "id": "OFFSITE-AVAIL", "name": "Offsite power available (derived)", "type": "derived", "source": "logic", "expr": "SWYD-345KV == energized AND RAT == in-service AND RAT-86 == reset" },
+    { "id": "LOOP", "name": "Loss of offsite power (derived)", "type": "derived", "source": "logic", "expr": "NOT OFFSITE-AVAIL", "notes": "With a single RAT this is the only offsite path. A second incoming line / second reserve transformer would make this a 2-of-2 condition." },
+    { "id": "UNIT-SELF-FED", "name": "Unit carrying its own auxiliaries (derived)", "type": "derived", "source": "logic", "expr": "NBUS-1-SOURCE == normal AND NBUS-2-SOURCE == normal" }
+  ],
+
+  "logic": {
+    "permissives": [
+      {
+        "id": "NBUS-{n}-NORM-CLOSE-PERM",
+        "allows": "close NBUS-{n}-NORM-52",
+        "expr": "IPB == energized AND UAT-{uat} == in-service AND UAT-{uat}-86 == reset AND (NBUS-{n}-RES-52 == open OR NBUS-{n}-25 == in-sync)",
+        "notes": "The parallel case is the manual back-transfer: both sources live and in step, closed together for a moment. Everything else requires the other incomer open."
+      },
+      {
+        "id": "NBUS-{n}-RES-CLOSE-PERM",
+        "allows": "close NBUS-{n}-RES-52",
+        "expr": "RBUS == energized AND RAT-86 == reset AND (NBUS-{n}-NORM-52 == open OR NBUS-{n}-25 == in-sync)",
+        "notes": "Automatic transfers always satisfy this through the NORM-52-open branch - break-before-make."
+      },
+      {
+        "id": "GEN-52-CLOSE-PERM",
+        "allows": "close GEN-52",
+        "expr": "external:TG-SYNC-OK",
+        "notes": "Synchronizing permissive owned by the turbine-generator file (synchroscope + sync-check). Listed here only because GEN-52 lives in this file."
+      }
+    ],
+    "autoActions": [
+      {
+        "id": "NBUS-{n}-XFER-FAST",
+        "action": "trip NBUS-{n}-NORM-52, then close NBUS-{n}-RES-52; NBUS-{n}-XFER -> reserve",
+        "expr": "NBUS-{n}-XFER == normal AND mcr:NBUS-{n}-XFER-MODE == auto AND (external:TURB-TRIP OR GEN-52 == tripped OR UAT-{uat}-86 == lockout OR NBUS-{n}-27 == degraded)",
+        "notes": "The fast (dead-bus) transfer. Close is supervised by the NORM-52 52b contact, not by a timer - never parallel the sources. Total dead time about 5-10 cycles; bus voltage dips to roughly 70-80% and recovers, motors ride through on residual voltage and the operator sees a blip and an annunciator."
+      },
+      {
+        "id": "NBUS-{n}-XFER-RESIDUAL",
+        "action": "close NBUS-{n}-RES-52; NBUS-{n}-XFER -> reserve",
+        "expr": "NBUS-{n}-XFER == transferring AND NBUS-{n}-NORM-52 == open AND NBUS-{n}-27 == residual AND RBUS == energized",
+        "notes": "Fallback when the fast path never fired (no trip contact, VT failure, initiate lost) or the close was blocked. Waits for bus voltage to decay below ~30%, which takes 1-4 s with this much motor inertia on the bus. Every motor has slowed measurably by then: loop flow sags and the reactor may or may not survive it."
+      },
+      {
+        "id": "NBUS-{n}-XFER-FAILED",
+        "action": "NBUS-{n}-XFER -> failed",
+        "expr": "NBUS-{n}-XFER == transferring AND (RBUS == deenergized OR NBUS-{n}-RES-52 == tripped OR residualTimeoutS elapsed)",
+        "notes": "Bus stays dead. Two RCPs coast down on their flywheels, two-loop low flow trips the reactor, and the RCP auxiliary MCCs go looking for their alternate feed. Recovery is manual."
+      },
+      {
+        "id": "UAT-{uat}-86-ON-PROT",
+        "action": "UAT-{uat}-86 -> lockout",
+        "expr": "UAT-{uat}-PROT == picked-up",
+        "notes": ""
+      },
+      {
+        "id": "NBUS-{n}-NORM-TRIP-ON-86",
+        "action": "trip NBUS-{n}-NORM-52",
+        "expr": "UAT-{uat}-86 == lockout",
+        "notes": "Trip and hold open; back-transfer blocked until the lockout is reset locally."
+      },
+      {
+        "id": "RAT-86-ON-PROT",
+        "action": "RAT-86 -> lockout",
+        "expr": "RAT-PROT == picked-up",
+        "notes": ""
+      },
+      {
+        "id": "RES-TRIP-ON-RAT86",
+        "action": "trip NBUS-{n}-RES-52 for ALL n",
+        "expr": "RAT-86 == lockout",
+        "notes": "Loses the reserve path for the whole plant. Any bus already on reserve goes dead immediately."
+      }
+    ],
+    "sequences": [
+      {
+        "id": "NBUS-{n}-FAST-XFER-SEQ",
+        "trigger": "turbine or generator trip, UAT lockout, or bus undervoltage at 90%, with the mode selector in AUTO",
+        "steps": [
+          "NBUS-{n}-XFER -> transferring; BUS {n} TRANSFER annunciator",
+          "trip NBUS-{n}-NORM-52 (t = 0)",
+          "wait for the NORM-52 52b contact to confirm open (~30-50 ms)",
+          "close NBUS-{n}-RES-52 - total dead time 85-170 ms",
+          "NBUS-{n}-XFER -> reserve; BUS {n} ON RESERVE annunciator seals in",
+          "if RES-52 does not confirm closed, fall through to NBUS-{n}-RESIDUAL-XFER-SEQ"
+        ]
+      },
+      {
+        "id": "NBUS-{n}-RESIDUAL-XFER-SEQ",
+        "trigger": "fast transfer unavailable or incomplete with NORM-52 already open",
+        "steps": [
+          "hold with the bus coasting on motor residual voltage",
+          "wait for NBUS-{n}-27 to read residual (< ~30% of nominal, 1-4 s)",
+          "close NBUS-{n}-RES-52",
+          "re-accelerate the bus; RCP speed and loop flow recover from a visible sag",
+          "if residualTimeoutS elapses with no close, NBUS-{n}-XFER -> failed and the bus is dead"
+        ]
+      },
+      {
+        "id": "NBUS-{n}-BACK-XFER-SEQ",
+        "trigger": "operator, after the generator is synchronized and loaded (never automatic)",
+        "steps": [
+          "verify GEN-52 closed and the generator carrying load",
+          "verify UAT-{uat} in-service and UAT-{uat}-86 reset",
+          "verify NBUS-{n}-25 reads in-sync (both sources live, tied through the MSUT, so normally in step)",
+          "close NBUS-{n}-NORM-52 - momentary make-before-break parallel",
+          "verify the bus is carried from normal (incomer current shifts)",
+          "trip NBUS-{n}-RES-52",
+          "NBUS-{n}-XFER -> normal; return the reserve control switch to open to clear the out-of-correspondence lamp"
+        ]
+      },
+      {
+        "id": "EPS-STARTUP-LINEUP",
+        "trigger": "cold plant initial condition (this file's initialState)",
+        "steps": [
+          "SWYD-345KV energized, RAT in-service, RBUS energized",
+          "generator offline, GEN-52 open, IPB dead, both UATs in-service but dead",
+          "both NORM-52 open, both RES-52 closed, both buses energized from reserve",
+          "NBUS-{n}-XFER -> reserve; both ON RESERVE annunciators lit - normal for a shutdown plant",
+          "RCPs can be started on reserve power; back-transfer happens later, after the generator is on the line"
+        ]
+      }
+    ]
+  },
+
+  "mcr": {
+    "sics": [
+      {
+        "defName": "NBUS-{n}-NORM-52-CS",
+        "label": "BUS {n} NORMAL SUPPLY",
+        "control": { "kind": "rot2p", "states": ["open", "closed"], "notes": "LATCHING - maintained request, not a momentary command. The breaker follows when the permissive is met; any trip leaves the switch out of correspondence and reclosing is blocked until it is cycled back to open. Rot2p exists in Unity." },
+        "drives": "close/trip NBUS-{n}-NORM-52 (gated by NBUS-{n}-NORM-CLOSE-PERM)",
+        "reads": null,
+        "layout": { "panel": "EPS", "row": 1, "col": "{n}" }
+      },
+      {
+        "defName": "NBUS-{n}-NORM-LAMPS",
+        "label": "BUS {n} NORMAL",
+        "control": { "kind": "indicator-lamp-pair", "states": ["green=open", "red=closed", "both=out of correspondence"], "notes": "SwitchLampIndicator exists; the both-lit state is the new one to add." },
+        "drives": null,
+        "reads": "NBUS-{n}-NORM-52-POS",
+        "layout": { "panel": "EPS", "row": 2, "col": "{n}" }
+      },
+      {
+        "defName": "NBUS-{n}-RES-52-CS",
+        "label": "BUS {n} RESERVE SUPPLY",
+        "control": { "kind": "rot2p", "states": ["open", "closed"], "notes": "LATCHING, same convention as the normal incomer." },
+        "drives": "close/trip NBUS-{n}-RES-52 (gated by NBUS-{n}-RES-CLOSE-PERM)",
+        "reads": null,
+        "layout": { "panel": "EPS", "row": 3, "col": "{n}" }
+      },
+      {
+        "defName": "NBUS-{n}-RES-LAMPS",
+        "label": "BUS {n} RESERVE",
+        "control": { "kind": "indicator-lamp-pair", "states": ["green=open", "red=closed", "both=out of correspondence"] },
+        "drives": null,
+        "reads": "NBUS-{n}-RES-52-POS",
+        "layout": { "panel": "EPS", "row": 4, "col": "{n}" }
+      },
+      {
+        "defName": "NBUS-{n}-XFER-MODE",
+        "label": "BUS {n} AUTO TRANSFER",
+        "control": { "kind": "rot3p", "states": ["off", "manual", "auto"], "notes": "LATCHING three-position selector - a genuine maintained selector, which is what Rot3p is good for. OFF blocks the scheme entirely (deliberate dead-bus setups); MANUAL arms the scheme but requires the operator to close the reserve incomer; AUTO is the normal at-power position." },
+        "drives": "NBUS-{n}-XFER mode",
+        "reads": null,
+        "layout": { "panel": "EPS", "row": 5, "col": "{n}" }
+      },
+      {
+        "defName": "NBUS-{n}-VOLTS-IND",
+        "label": "BUS {n} VOLTS",
+        "control": { "kind": "gauge", "range": [0, 8], "notes": "kV. GE-generic-gauge model available. Dedicated per-bus meters rather than one meter behind a selector switch, because a transfer is exactly when you want to watch both buses at once." },
+        "drives": null,
+        "reads": "NBUS-{n}-VOLTS",
+        "layout": { "panel": "EPS", "row": 6, "col": "{n}" }
+      },
+      {
+        "defName": "NBUS-{n}-FREQ-IND",
+        "label": "BUS {n} FREQ",
+        "control": { "kind": "gauge", "range": [0, 80], "notes": "Hz. Same scale as the existing RCP frequency gauges - and now that pump speed follows the bus, they are indicating the same physical quantity." },
+        "drives": null,
+        "reads": "NBUS-{n}-FREQ",
+        "layout": { "panel": "EPS", "row": 7, "col": "{n}" }
+      },
+      {
+        "defName": "SWYD-VOLTS-IND",
+        "label": "SWITCHYARD VOLTS",
+        "control": { "kind": "gauge", "range": [0, 400], "notes": "kV" },
+        "drives": null,
+        "reads": "SWYD-VOLTS",
+        "layout": { "panel": "EPS", "row": 8, "col": 1 }
+      },
+      {
+        "defName": "IPB-VOLTS-IND",
+        "label": "GENERATOR BUS VOLTS",
+        "control": { "kind": "gauge", "range": [0, 30], "notes": "kV" },
+        "drives": null,
+        "reads": "IPB-VOLTS",
+        "layout": { "panel": "EPS", "row": 8, "col": 2 }
+      },
+      {
+        "defName": "RBUS-VOLTS-IND",
+        "label": "RESERVE BUS VOLTS",
+        "control": { "kind": "gauge", "range": [0, 8], "notes": "kV. The one meter that tells the operator whether an automatic transfer has anywhere to go." },
+        "drives": null,
+        "reads": "RBUS-VOLTS",
+        "layout": { "panel": "EPS", "row": 8, "col": 3 }
+      },
+      {
+        "defName": "GEN-52-LAMPS",
+        "label": "GENERATOR BREAKER",
+        "control": { "kind": "indicator-lamp-pair", "states": ["green=open", "red=closed"], "notes": "The control switch itself is already implemented client-side as 'Gen Breaker' and is owned by the turbine-generator panel; this is the position indication as seen from the electrical panel." },
+        "drives": null,
+        "reads": "GEN-52-POS",
+        "layout": { "panel": "EPS", "row": 9, "col": 1 }
+      },
+      {
+        "defName": "ANN-NBUS{n}-UV",
+        "label": "BUS {n} UNDERVOLTAGE",
+        "control": { "kind": "annunciator" },
+        "drives": null,
+        "reads": "NBUS-{n}-27 != normal",
+        "layout": { "panel": "ANN-EPS", "row": 1, "col": "{n}" }
+      },
+      {
+        "defName": "ANN-NBUS{n}-UF",
+        "label": "BUS {n} UNDERFREQUENCY",
+        "control": { "kind": "annunciator", "notes": "Also an RPS reactor-trip input - see NBUS-{n}-81." },
+        "drives": null,
+        "reads": "NBUS-{n}-81 == picked-up",
+        "layout": { "panel": "ANN-EPS", "row": 2, "col": "{n}" }
+      },
+      {
+        "defName": "ANN-NBUS{n}-ONRES",
+        "label": "BUS {n} ON RESERVE",
+        "control": { "kind": "annunciator" },
+        "drives": null,
+        "reads": "NBUS-{n}-SOURCE == reserve",
+        "layout": { "panel": "ANN-EPS", "row": 3, "col": "{n}" }
+      },
+      {
+        "defName": "ANN-NBUS{n}-XFER-FAIL",
+        "label": "BUS {n} TRANSFER FAILED",
+        "control": { "kind": "annunciator" },
+        "drives": null,
+        "reads": "NBUS-{n}-XFER == failed",
+        "layout": { "panel": "ANN-EPS", "row": 4, "col": "{n}" }
+      },
+      {
+        "defName": "ANN-NBUS{n}-DEAD",
+        "label": "BUS {n} DEAD",
+        "control": { "kind": "annunciator" },
+        "drives": null,
+        "reads": "NBUS-{n}-DEAD",
+        "layout": { "panel": "ANN-EPS", "row": 5, "col": "{n}" }
+      },
+      {
+        "defName": "ANN-UAT{uat}-TROUBLE",
+        "label": "UAT {uat} TROUBLE",
+        "control": { "kind": "annunciator", "notes": "Protection pickup or 86 lockout." },
+        "drives": null,
+        "reads": "UAT-{uat}-86 == lockout OR UAT-{uat}-PROT == picked-up",
+        "layout": { "panel": "ANN-EPS", "row": 6, "col": "{uat}" }
+      },
+      {
+        "defName": "ANN-RAT-TROUBLE",
+        "label": "RESERVE XFMR TROUBLE",
+        "control": { "kind": "annunciator" },
+        "drives": null,
+        "reads": "RAT-86 == lockout OR RAT-PROT == picked-up",
+        "layout": { "panel": "ANN-EPS", "row": 7, "col": 1 }
+      },
+      {
+        "defName": "ANN-LOOP",
+        "label": "LOSS OF OFFSITE POWER",
+        "control": { "kind": "annunciator", "notes": "First-out grade - this one wakes everybody up." },
+        "drives": null,
+        "reads": "LOOP",
+        "layout": { "panel": "ANN-EPS", "row": 7, "col": 2 }
+      }
+    ],
+    "pics": []
+  },
+
+  "links": [
+    { "from": "external:TG-GEN", "to": "IPB", "type": "power", "notes": "main generator terminals, ~22kV; generator physics owned by the turbine-generator file (turbine_sim.py already models runup, load and the synchroscope)" },
+    { "from": "IPB", "to": "GEN-52", "type": "power" },
+    { "from": "GEN-52", "to": "MSUT", "type": "power", "notes": "unit output path; also the grid backfeed path into IPB when the generator is off the line" },
+    { "from": "MSUT", "to": "SWYD-345KV", "type": "power", "bidirectional": true, "notes": "export at power, backfeed at standstill" },
+    { "from": "IPB", "to": "UAT-{uat}", "type": "power", "notes": "both UAT taps sit on the GENERATOR side of GEN-52 - that is what makes the unit feed its own auxiliaries" },
+    { "from": "UAT-{uat}", "to": "NBUS-{n}-NORM-52", "type": "power", "label": "NBUS-{n}-NORM feeder" },
+    { "from": "NBUS-{n}-NORM-52", "to": "NBUS-{n}", "type": "power" },
+    { "from": "SWYD-345KV", "to": "RAT", "type": "power", "notes": "offsite source, independent of the generator" },
+    { "from": "RAT", "to": "RBUS", "type": "power" },
+    { "from": "RBUS", "to": "NBUS-{n}-RES-52", "type": "power", "label": "NBUS-{n}-RES feeder", "notes": "both buses tap the same reserve bar; normally open" },
+    { "from": "NBUS-{n}-RES-52", "to": "NBUS-{n}", "type": "power" },
+    { "from": "NBUS-{n}", "to": "external:RCP{n}-BUS-52", "type": "power", "notes": "RCP1&2 groups off NBUS-1, RCP3&4 off NBUS-2 - see rcs/rcp.json" },
+    { "from": "NBUS-{n}", "to": "external:EPS-ONSITE", "type": "power", "notes": "load-center transformers, 4.16kV 1E bus feeders and balance-of-plant loads - NOT designed yet" },
+    { "from": "external:DC-125", "to": "NBUS-{n}-NORM-52", "type": "power", "notes": "trip/close coil and relay control power" },
+    { "from": "external:DC-125", "to": "NBUS-{n}-RES-52", "type": "power" },
+    { "from": "external:DC-125", "to": "NBUS-{n}-XFER", "type": "power", "notes": "the transfer scheme is only as available as the station battery" },
+
+    { "from": "NBUS-{n}-VT", "to": "NBUS-{n}-27", "type": "signal" },
+    { "from": "NBUS-{n}-VT", "to": "NBUS-{n}-81", "type": "signal" },
+    { "from": "NBUS-{n}-VT", "to": "NBUS-{n}-25", "type": "signal", "notes": "bus side of the sync check" },
+    { "from": "RBUS", "to": "NBUS-{n}-25", "type": "signal", "notes": "reserve side of the sync check" },
+    { "from": "UAT-{uat}", "to": "NBUS-{n}-25", "type": "signal", "notes": "normal side of the sync check" },
+    { "from": "NBUS-{n}-27", "to": "NBUS-{n}-XFER", "type": "control", "notes": "degraded = initiate, residual = fallback permissive" },
+    { "from": "NBUS-{n}-25", "to": "NBUS-{n}-NORM-52", "type": "control", "notes": "close permission for the manual parallel" },
+    { "from": "NBUS-{n}-25", "to": "NBUS-{n}-RES-52", "type": "control" },
+    { "from": "external:TURB-TRIP", "to": "NBUS-{n}-XFER", "type": "control", "notes": "turbine trip contact - the primary fast-transfer initiate" },
+    { "from": "GEN-52", "to": "NBUS-{n}-XFER", "type": "control", "notes": "generator breaker trip contact - second initiate" },
+    { "from": "NBUS-{n}-XFER", "to": "NBUS-{n}-NORM-52", "type": "control", "notes": "trip first" },
+    { "from": "NBUS-{n}-NORM-52", "to": "NBUS-{n}-XFER", "type": "signal", "notes": "52b contact - close of the reserve incomer is supervised by this, never by a timer" },
+    { "from": "NBUS-{n}-XFER", "to": "NBUS-{n}-RES-52", "type": "control", "notes": "close second - break-before-make" },
+    { "from": "UAT-{uat}-PROT", "to": "UAT-{uat}-86", "type": "control" },
+    { "from": "UAT-{uat}-86", "to": "NBUS-{n}-NORM-52", "type": "control", "notes": "trip + hold open + block back-transfer" },
+    { "from": "UAT-{uat}-86", "to": "NBUS-{n}-XFER", "type": "control", "notes": "third fast-transfer initiate" },
+    { "from": "RAT-PROT", "to": "RAT-86", "type": "control" },
+    { "from": "RAT-86", "to": "NBUS-{n}-RES-52", "type": "control", "notes": "trips both reserve incomers - the whole reserve path is lost" },
+    { "from": "NBUS-{n}-81", "to": "external:RPS", "type": "signal", "notes": "RCP bus underfrequency reactor trip input, 2-of-4 buses above the low-power interlock - owned by the future RPS file" },
+    { "from": "NBUS-{n}-27", "to": "external:RPS", "type": "signal", "notes": "RCP bus undervoltage reactor trip input, same arrangement" },
+
+    { "from": "mcr:NBUS-{n}-NORM-52-CS", "to": "NBUS-{n}-NORM-52", "type": "control", "notes": "maintained request, gated by the close permissive" },
+    { "from": "mcr:NBUS-{n}-RES-52-CS", "to": "NBUS-{n}-RES-52", "type": "control", "notes": "maintained request, gated by the close permissive" },
+    { "from": "mcr:NBUS-{n}-XFER-MODE", "to": "NBUS-{n}-XFER", "type": "control" },
+    { "from": "NBUS-{n}-NORM-52", "to": "mcr:NBUS-{n}-NORM-LAMPS", "type": "signal" },
+    { "from": "NBUS-{n}-RES-52", "to": "mcr:NBUS-{n}-RES-LAMPS", "type": "signal" },
+    { "from": "GEN-52", "to": "mcr:GEN-52-LAMPS", "type": "signal" },
+    { "from": "NBUS-{n}-VT", "to": "mcr:NBUS-{n}-VOLTS-IND", "type": "signal" },
+    { "from": "NBUS-{n}-VT", "to": "mcr:NBUS-{n}-FREQ-IND", "type": "signal" },
+    { "from": "SWYD-345KV", "to": "mcr:SWYD-VOLTS-IND", "type": "signal" },
+    { "from": "IPB", "to": "mcr:IPB-VOLTS-IND", "type": "signal" },
+    { "from": "RBUS", "to": "mcr:RBUS-VOLTS-IND", "type": "signal" },
+    { "from": "NBUS-{n}-27", "to": "mcr:ANN-NBUS{n}-UV", "type": "signal" },
+    { "from": "NBUS-{n}-81", "to": "mcr:ANN-NBUS{n}-UF", "type": "signal" },
+    { "from": "NBUS-{n}-XFER", "to": "mcr:ANN-NBUS{n}-ONRES", "type": "signal" },
+    { "from": "NBUS-{n}-XFER", "to": "mcr:ANN-NBUS{n}-XFER-FAIL", "type": "signal" },
+    { "from": "NBUS-{n}", "to": "mcr:ANN-NBUS{n}-DEAD", "type": "signal" },
+    { "from": "UAT-{uat}-86", "to": "mcr:ANN-UAT{uat}-TROUBLE", "type": "signal" },
+    { "from": "RAT-86", "to": "mcr:ANN-RAT-TROUBLE", "type": "signal" },
+    { "from": "logic:LOOP", "to": "mcr:ANN-LOOP", "type": "signal" }
+  ],
+
+  "dependencies": [
+    { "system": "TG", "interface": "main generator output onto IPB, synchronizing permissive for GEN-52, and the turbine trip contact that initiates every fast transfer", "signals": ["TURB-TRIP", "TG-SYNC-OK", "GEN-MW"], "notes": "Future turbine-generator file. Partly implemented already: turbine_sim.py plus the Gen Breaker switch, synchroscope and Gen Load gauge." },
+    { "system": "GRID", "interface": "switchyard voltage and frequency as a boundary condition", "signals": ["SWYD-VOLTS", "SWYD-FREQ"], "notes": "The 'Grid Freq.' gauge (57-63 Hz) is already implemented. Grid frequency is what the fixed-speed RCPs follow, and what the 81 relays watch." },
+    { "system": "EPS-ONSITE", "interface": "MIGRATION TARGET for NBUS-{n}; and the loads below it - load-center transformers, 480 V load centers and MCCs, 4.16 kV Class 1E buses, two EDGs (trains A and B), one AAC/SBO diesel", "signals": [], "notes": "NOT DESIGNED YET. Deliberately out of scope 2026-09-06. Until it exists, NBUS-{n} lives here and the RCP auxiliary MCC feeds in rcs/rcp.json still point at the old EPR-era SBO buses." },
+    { "system": "RCS", "interface": "NBUS-{n} feeds the four RCP electrical groups, two per bus", "signals": [], "notes": "rcs/rcp.json. Bus availability - not the control switch - is what decides whether a pump runs; see the source-of-truth note in _schema.md." },
+    { "system": "RPS", "interface": "RCP bus undervoltage and underfrequency reactor trip inputs (2-of-4 buses above the low-power interlock), and RCP breaker position trip", "signals": ["NBUS-{n}-VOLTS", "NBUS-{n}-FREQ", "NBUS-{n}-NORM-52-POS"], "notes": "Future protection-system file. These are hardwired Westinghouse reactor trips with no EPR equivalent, and they are the reason bus frequency is worth indicating." },
+    { "system": "DC-125", "interface": "125 VDC control power for every breaker coil, protective relay and the transfer scheme itself", "signals": ["DC-OK"], "notes": "Future eps/dc.json. This is what the io_state 'powered' flag on a switch should be reading." }
+  ]
+}

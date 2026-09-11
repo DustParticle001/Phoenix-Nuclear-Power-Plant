@@ -47,6 +47,14 @@ public class GaugeDefinition : ScriptableObject
     [Tooltip("Needle angle at maxValue.")]
     public float endAngle = 135f;
 
+    [Header("Movement")]
+    [Tooltip("Seconds the pointer takes to catch up with a step change - the instrument's " +
+             "movement, not the signal. Near zero is a rigid pointer that reads its input " +
+             "exactly (a synchroscope has to). A switchboard ammeter has a pivot, a spring " +
+             "and damping, so it slams over in a fraction of a second rather than teleporting: " +
+             "0.3 or so. Doesn't affect the baked face - no re-bake needed after changing it.")]
+    public float needleResponse = 0.02f;
+
     [Header("Color Bands")]
     [Tooltip("Colored arcs along the scale (normal / caution / danger zones), in scale values.")]
     public ColorBand[] bands = new ColorBand[0];

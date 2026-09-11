@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public class Rot2p : MonoBehaviour, ISwitchControl
+public class Rot2p : MonoBehaviour, ISwitchControl, IInteractable
 {
     public enum SplitAxis { X, Y, Z }
 
@@ -10,7 +10,9 @@ public class Rot2p : MonoBehaviour, ISwitchControl
     [Header("Identity")]
     [SerializeField] private SwitchDefinition _definition;
     public SwitchDefinition Definition => _definition;
-    public string Id => _definition != null ? _definition.Id : "unassigned";
+    // The definition's UID if one is assigned, otherwise a panel above this
+    // control may name it - see IControlIdSource.
+    public string Id => ControlId.Resolve(this, _definition);
 
     [Header("Parts")]
     [SerializeField] private Transform _handle;

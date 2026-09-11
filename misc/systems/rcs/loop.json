@@ -10,7 +10,7 @@
     "RCS3": { "loop": 3, "rcp": "RCP3", "spray": true, "surge": true },
     "RCS4": { "loop": 4, "rcp": "RCP4", "charging": true }
   },
-  "notes": "US EPR FSAR Ch 5-derived; all numerics approx (no US EPR built). Primary loop piping only: RPV and core are external (future file), PZR is external (future rcs/pzr.json, owns RCS-PRESS), SG primary side lives in rcs/sg.json, RCP in rcs/rcp.json. Tap assignments decided 2026-07-10 (all approx - FSAR does not pin them down): surge line on loop 3 HL; PZR spray from loops 2&3 CL; charging into loops 1&4 CL; single letdown tap on loop 1 XL; SI nozzles on all 4 CLs plus LHSI hot-leg injection for long-term recirculation. Th/Tc/flow indicators placed on SICS as hardwired backups; primary presentation is PICS trend displays (deferred phase).",
+  "notes": "REBASED 2026-09-06 from US EPR to a late-1990s Westinghouse 4-loop PWR. The loop topology needed no change at all - the EPR RCS is a Westinghouse-lineage design, and the elbow-tap flow measurement and the surge/spray tap arrangement were already W convention. What changed: per-leg pipe sizes (29 in hot / 31 in crossover / 27.5 in cold, they were one 780 mm value), loop flow ~96,000 gpm, Th/Tc ~618/~557 degF, the low-flow trip logic and setpoint, and the SI nozzle description (four cold-leg accumulators and RWST/sump recirculation, not MHSI/LHSI/IRWST). PENDING: the metric -> US unit conversion on every gauge (degF, psig, gpm) is NOT done yet - it touches the Unity GaugeDefinitions too. Originally US EPR FSAR Ch 5-derived; numerics still approx but now sourceable from public late-90s W 4-loop UFSARs. Primary loop piping only: RPV and core are external (future file), PZR is external (future rcs/pzr.json, owns RCS-PRESS), SG primary side lives in rcs/sg.json, RCP in rcs/rcp.json. Tap assignments decided 2026-07-10 (all approx - FSAR does not pin them down): surge line on loop 3 HL; PZR spray from loops 2&3 CL; charging into loops 1&4 CL; single letdown tap on loop 1 XL; SI nozzles on all 4 CLs plus LHSI hot-leg injection for long-term recirculation. Th/Tc/flow indicators placed on SICS as hardwired backups; primary presentation is PICS trend displays (deferred phase).",
 
   "devices": [
     {
@@ -23,7 +23,7 @@
       "initialState": "intact",
       "actuation": ["auto"],
       "behavior": "Hot leg pipe: RPV outlet nozzle to SG{n} inlet plenum, carries full loop flow at Th. Loop 3 hot leg carries the pressurizer surge line tap. 'leak' = primary leak inside containment (size in casualty params); 'break' = large hot-leg LOCA. Casualty-injection states only - no operator action changes them.",
-      "params": { "innerDiameterMM": 780, "designTempC": 351, "approx": true }
+      "params": { "innerDiameterMM": 736, "innerDiameterIN": 29, "designTempC": 343, "designTempF": 650, "approx": true }
     },
     {
       "id": "RCS{n}-XL",
@@ -35,7 +35,7 @@
       "initialState": "intact",
       "actuation": ["auto"],
       "behavior": "Crossover leg: SG{n} outlet plenum down to RCP{n} suction. Lowest point of the loop (loop seal) - matters for small-break LOCA behavior. Carries the loop flow elbow taps (RCS{n}-FE) and, on loop 1, the CVCS letdown tap. 'break' = pump-suction LOCA.",
-      "params": { "innerDiameterMM": 780, "approx": true }
+      "params": { "innerDiameterMM": 787, "innerDiameterIN": 31, "approx": true }
     },
     {
       "id": "RCS{n}-CL",
@@ -47,7 +47,7 @@
       "initialState": "intact",
       "actuation": ["auto"],
       "behavior": "Cold leg: RCP{n} discharge to RPV inlet nozzle at Tc. Busiest segment for taps: SI nozzle (all loops), charging nozzle (loops 1&4), PZR spray tap (loops 2&3). 'break' = cold-leg LOCA (design-basis large break).",
-      "params": { "innerDiameterMM": 780, "approx": true }
+      "params": { "innerDiameterMM": 699, "innerDiameterIN": 27.5, "approx": true }
     },
     {
       "id": "RCS{n}-TH-RTD",
@@ -58,7 +58,7 @@
       "states": ["ok", "failed"],
       "initialState": "ok",
       "actuation": ["auto"],
-      "behavior": "Hot leg RTDs in thermowells near the SG inlet. SIMPLIFICATION: one device stands for the full narrow-range + wide-range set. Feeds RCS{n}-TH; used by Tavg/DT derivations and (future) RPS/RCSL.",
+      "behavior": "Hot leg RTDs in thermowells near the SG inlet - thermowell RTDs rather than the older RTD bypass manifold, which most W plants eliminated in the late 80s/early 90s (if you want early-90s fidelity instead, the bypass loop with its scoops and isolation valves is a real modelable system). Three hot-leg RTDs per loop. SIMPLIFICATION: one device stands for the full narrow-range + wide-range set. Feeds RCS{n}-TH; used by Tavg/DT derivations and (future) RPS/RCSL.",
       "params": { "rangeC": [0, 400], "approx": true }
     },
     {
@@ -82,18 +82,18 @@
       "states": ["ok", "failed"],
       "initialState": "ok",
       "actuation": ["auto"],
-      "behavior": "Elbow-tap differential-pressure loop flow measurement on the crossover leg (placement approx - Westinghouse-style convention). Feeds RCS{n}-FLOW; low loop flow is a (future) RPS reactor trip input, 2-of-4 loops.",
-      "params": { "ratedFlowM3H": 27185, "approx": true }
+      "behavior": "Elbow-tap differential-pressure loop flow measurement on the crossover leg - this is the Westinghouse convention, not an approximation. Three channels per loop feeding 2-of-3 coincidence logic; SIMPLIFICATION: one device stands for all three. Feeds RCS{n}-FLOW; low loop flow is a (future) RPS reactor trip input, 2-of-4 loops.",
+      "params": { "ratedFlowM3H": 22000, "ratedFlowGPM": 96000, "approx": true }
     }
   ],
 
   "signals": [
     { "id": "RCS{n}-TH", "name": "Loop {n} hot leg temperature", "type": "analog", "unit": "degC", "source": "RCS{n}-TH-RTD", "range": [0, 400] },
     { "id": "RCS{n}-TC", "name": "Loop {n} cold leg temperature", "type": "analog", "unit": "degC", "source": "RCS{n}-TC-RTD", "range": [0, 400] },
-    { "id": "RCS{n}-FLOW", "name": "Loop {n} coolant flow", "type": "analog", "unit": "m3/h", "source": "RCS{n}-FE", "range": [0, 32000] },
+    { "id": "RCS{n}-FLOW", "name": "Loop {n} coolant flow", "type": "analog", "unit": "m3/h", "source": "RCS{n}-FE", "range": [0, 26000] },
     { "id": "RCS{n}-TAVG", "name": "Loop {n} average temperature (derived)", "type": "derived", "source": "logic", "expr": "(RCS{n}-TH + RCS{n}-TC) / 2" },
     { "id": "RCS{n}-DT", "name": "Loop {n} delta-T (derived, ~ loop power)", "type": "derived", "source": "logic", "expr": "RCS{n}-TH - RCS{n}-TC" },
-    { "id": "RCS{n}-LOFLOW", "name": "Loop {n} low flow (derived)", "type": "derived", "source": "logic", "expr": "RCS{n}-FLOW < 0.87 * 27185", "notes": "Trip-grade use (2/4 loops -> reactor trip) belongs to the future RPS file; here it drives the annunciator only. Threshold approx." }
+    { "id": "RCS{n}-LOFLOW", "name": "Loop {n} low flow (derived)", "type": "derived", "source": "logic", "expr": "RCS{n}-FLOW < 0.90 * 22000", "notes": "Trip-grade use belongs to the future RPS file; here it drives the annunciator only. NOTE the Westinghouse logic is not the 2-of-4-loops arrangement this file originally carried: each loop has THREE flow channels with 2-of-3 coincidence, and the reactor trips on low flow in one loop above the P-8 power interlock or in two loops above P-7. Setpoint 90% of rated flow. Approx - confirm against a UFSAR Ch 7." }
   ],
 
   "logic": {
@@ -107,7 +107,7 @@
       {
         "defName": "RCS{n}-TH-IND",
         "label": "LOOP {n} T-HOT",
-        "control": { "kind": "gauge", "range": [0, 400], "notes": "SICS hardwired backup; PICS trends are the primary display (deferred). GE-general-gauge model available." },
+        "control": { "kind": "gauge", "range": [0, 400], "notes": "PRIMARY indication - a late-90s Westinghouse MCR is all hardwired benchboard and vertical panel, so there is no PICS soft-control layer for this to be a backup to. Expect multipoint strip-chart recorders and Tavg/DT meters alongside these. GE-general-gauge model available." },
         "drives": null,
         "reads": "RCS{n}-TH",
         "layout": { "panel": "RCS", "row": 6, "col": "{n}" }
@@ -123,7 +123,7 @@
       {
         "defName": "RCS{n}-FLOW-IND",
         "label": "LOOP {n} FLOW",
-        "control": { "kind": "gauge", "range": [0, 32000] },
+        "control": { "kind": "gauge", "range": [0, 26000] },
         "drives": null,
         "reads": "RCS{n}-FLOW",
         "layout": { "panel": "RCS", "row": 8, "col": "{n}" }
@@ -141,12 +141,12 @@
   },
 
   "links": [
-    { "from": "external:RPV", "to": "RCS{n}-HL", "type": "fluid", "medium": "water", "notes": "hot leg nozzle; ~328C at full power (approx). RPV/core = future file" },
+    { "from": "external:RPV", "to": "RCS{n}-HL", "type": "fluid", "medium": "water", "notes": "hot leg nozzle; ~326C / ~618F at full power (approx). RPV/core = future file" },
     { "from": "RCS{n}-HL", "to": "external:SG{n}-PRI-IN", "type": "fluid", "medium": "water", "notes": "SG inlet plenum - see rcs/sg.json" },
     { "from": "external:SG{n}-PRI-OUT", "to": "RCS{n}-XL", "type": "fluid", "medium": "water", "notes": "SG outlet plenum - see rcs/sg.json" },
     { "from": "RCS{n}-XL", "to": "external:RCP{n}-HYD", "type": "fluid", "medium": "water", "notes": "pump suction - see rcs/rcp.json" },
     { "from": "external:RCP{n}-HYD", "to": "RCS{n}-CL", "type": "fluid", "medium": "water", "notes": "pump discharge - see rcs/rcp.json" },
-    { "from": "RCS{n}-CL", "to": "external:RPV", "type": "fluid", "medium": "water", "notes": "cold leg nozzle into RPV downcomer; ~296C at full power (approx)" },
+    { "from": "RCS{n}-CL", "to": "external:RPV", "type": "fluid", "medium": "water", "notes": "cold leg nozzle into RPV downcomer; ~292C / ~557F at full power (approx)" },
 
     { "from": "RCS3-HL", "to": "external:PZR", "type": "fluid", "medium": "water", "bidirectional": true, "notes": "pressurizer surge line, loop 3 only (assignment approx). In/out-surge flows both ways. PZR = future rcs/pzr.json" },
     { "from": "RCS2-CL", "to": "external:PZR", "type": "fluid", "medium": "water", "notes": "PZR spray line tap (assignment approx); spray valve owned by pzr.json" },
@@ -154,8 +154,8 @@
     { "from": "external:CVCS", "to": "RCS1-CL", "type": "fluid", "medium": "water", "notes": "charging nozzle (assignment approx); charging pumps/valves owned by cvcs file" },
     { "from": "external:CVCS", "to": "RCS4-CL", "type": "fluid", "medium": "water", "notes": "charging nozzle (assignment approx)" },
     { "from": "RCS1-XL", "to": "external:CVCS", "type": "fluid", "medium": "water", "notes": "letdown tap - single letdown point, loop 1 crossover leg (assignment approx)" },
-    { "from": "external:SIS", "to": "RCS{n}-CL", "type": "fluid", "medium": "water", "notes": "SI nozzle, all loops (MHSI + LHSI cold-leg injection)" },
-    { "from": "external:SIS", "to": "RCS{n}-HL", "type": "fluid", "medium": "water", "notes": "LHSI hot-leg injection path for long-term recirculation (approx)" },
+    { "from": "external:SIS", "to": "RCS{n}-CL", "type": "fluid", "medium": "water", "notes": "SI nozzle, all four cold legs: passive accumulator discharge plus centrifugal charging/SI and intermediate-head SI pumps. The EPR MHSI/LHSI/IRWST arrangement this file originally carried does not exist here - a W 4-loop has four cold-leg accumulators and takes suction from the RWST, then switches over to the containment sump" },
+    { "from": "external:SIS", "to": "RCS{n}-HL", "type": "fluid", "medium": "water", "notes": "hot-leg recirculation switchover path (RHR/low-head SI), post-LOCA long term - a real W procedure, not the EPR LHSI hot-leg line" },
 
     { "from": "RCS{n}-TH-RTD", "to": "mcr:RCS{n}-TH-IND", "type": "signal" },
     { "from": "RCS{n}-TC-RTD", "to": "mcr:RCS{n}-TC-IND", "type": "signal" },
@@ -168,8 +168,8 @@
     { "system": "PZR", "interface": "surge line (loop 3), spray taps (loops 2&3), RCS pressure owner", "signals": ["RCS-PRESS"], "notes": "Future rcs/pzr.json. RCS-PRESS is already a dependency of rcp.json start permissive." },
     { "system": "SG", "interface": "primary-side plena and tube bundle in each loop", "signals": [], "notes": "rcs/sg.json (same system, separate unit file)." },
     { "system": "RCP", "interface": "pump between XL and CL of each loop", "signals": ["RCP{n}-SPEED"], "notes": "rcs/rcp.json. Loop flow ~ pump speed; reverse flow through stopped-pump loops handled by loop physics later." },
-    { "system": "SIS", "interface": "cold-leg SI nozzles (all loops), hot-leg LHSI (long-term)", "signals": [], "notes": "Future file." },
+    { "system": "SIS", "interface": "four cold-leg accumulators and SI nozzles (all loops), hot-leg recirculation switchover (long-term)", "signals": [], "notes": "Future file. Westinghouse arrangement: accumulators, centrifugal charging/SI pumps, intermediate-head SI pumps, RHR as low-head SI, RWST then containment sump recirculation. No IRWST." },
     { "system": "CVCS", "interface": "charging nozzles (loops 1&4), letdown tap (loop 1 XL)", "signals": [], "notes": "Future file; already a dependency of rcp.json (seal injection)." },
-    { "system": "RPS", "interface": "low loop flow reactor trip input (2-of-4 loops)", "signals": ["RCS{n}-FLOW"], "notes": "Future protection-system file; RCS{n}-LOFLOW here is annunciator-grade only." }
+    { "system": "RPS", "interface": "low loop flow reactor trip input (2-of-3 channels per loop; one loop above P-8 or two loops above P-7), plus RCP bus undervoltage/underfrequency and RCP breaker position trips", "signals": ["RCS{n}-FLOW"], "notes": "Future protection-system file; RCS{n}-LOFLOW here is annunciator-grade only. The bus undervoltage and underfrequency trips come from eps/offsite.json." }
   ]
 }

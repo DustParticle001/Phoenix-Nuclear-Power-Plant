@@ -68,12 +68,20 @@ RPM_PER_HZ = 30.0
 NOMINAL_GRID_HZ = 60.0
 
 RESPONSE_TAU = 30.0     # seconds to close ~63% of the gap to the demand
-TICK_SECONDS = 0.1
+TICK_SECONDS = 0.005    # TEMPORARY: 0.1 normally. Has to be at least as quick
+                        # as the client's interval or the phase arrives stepped.
 SNAP_RPM = 0.5          # close enough to the demand counts as at the demand
 
-# How near synchronous speed the machine has to be for the synchroscope to mean
-# anything - and so for the breaker to catch.
+# How near synchronous speed the machine has to be for the breaker to catch.
 SYNC_BAND_RPM = 10.0
+
+# TEMPORARY, normally True. On, the synchroscope stays blank until the machine
+# is inside SYNC_BAND_RPM, where the offset drifts slowly enough to read. Off,
+# the pointer shows the offset whenever the instrument is switched in - expect
+# nonsense below about 1725 RPM, where the phase turns more than half a dial
+# between client syncs and the needle aliases into reading backwards. Display
+# only: the breaker still needs the band, so syncing is unchanged.
+LIMIT_SCOPE_TO_SYNC_BAND = False
 
 # Arabelle's rating, reached with the valve wide open. Everything between there
 # and the load zero point at RATED_VALVE_PCT is proportional.
@@ -89,12 +97,14 @@ GRID_HZ_MIN, GRID_HZ_MAX = 57.0, 63.0
 class TurbineSimulation:
     def __init__(self, valve_uid=TURBINE_VALVE_POS, rated_rpm=RATED_RPM,
                  rated_valve_pct=RATED_VALVE_PCT, tau=RESPONSE_TAU,
-                 sync_band=SYNC_BAND_RPM, tick=TICK_SECONDS, snap_rpm=SNAP_RPM):
+                 sync_band=SYNC_BAND_RPM, tick=TICK_SECONDS, snap_rpm=SNAP_RPM,
+                 limit_scope=LIMIT_SCOPE_TO_SYNC_BAND):
         self.valve_uid = valve_uid
         self.tau = tau
         self.sync_band = sync_band
         self.tick = tick
         self.snap_rpm = snap_rpm
+        self.limit_scope = limit_scope
 
         self.rpm_per_percent = rated_rpm / rated_valve_pct
 
@@ -217,7 +227,7 @@ class TurbineSimulation:
         if state.get_gauge(SYNCHROSCOPE) is None or not self._is_on(SYNC_TOGGLE):
             return   # switched out - the pointer sits where it was left
 
-        if abs(rpm - grid_rpm) > self.sync_band:
+        if self.limit_scope and abs(rpm - grid_rpm) > self.sync_band:
             # Further out the drift is an unreadable blur, and past ~75 RPM it
             # turns more than half a dial between syncs, so the pointer would
             # alias and read backwards. The offset itself keeps being tracked.

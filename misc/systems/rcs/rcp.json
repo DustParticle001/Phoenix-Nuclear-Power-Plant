@@ -10,62 +10,21 @@
     "RCP3": { "bus": 2, "loop": 3, "sbo": 2 },
     "RCP4": { "bus": 2, "loop": 4, "sbo": 2 }
   },
-  "notes": "US EPR FSAR Ch 5.4-derived. No US EPR built; all numeric params are estimates (approx:true). RCPs are non-Class-1E loads: no EDG backup, flywheel coastdown on LOOP. Component-level granularity per decision 2026-07-03. Electrical chain (switchyard/NAT/buses) modeled here temporarily - tagged migrateTo:EPSS. Per-RCP electrical group (master BUS-52 -> RCP-BUS -> FDR-52 motor / MCC-52 aux branch) is a deliberate sim design, not AREVA practice - decided 2026-07-03. MCC has dual feed via break-before-make ATS: normal from RCP-BUS, alternate from non-1E SBO-diesel-backed 480V bus; SSS solenoid on battery 125VDC (SBO-proof) - decided 2026-07-03.",
+  "notes": "REBASED 2026-09-06 from US EPR to a late-1990s Westinghouse 4-loop PWR (Model 93A-class RCP). Originally US EPR FSAR Ch 5.4-derived; numerics still approx:true but they are now sourceable for real - late-90s W 4-loop UFSARs (Watts Bar, Vogtle, Callaway, Comanche Peak, Seabrook) are public, so replace the estimates as you go. WHAT SURVIVED THE REBASE UNCHANGED: three-stage controlled-leakage shaft seal with #1 leakoff to CVCS and #2/#3 to the RCDT, CCW-cooled thermal barrier and oil coolers, oil lift pump pre-run and coastdown run, flywheel coastdown, non-1E with no EDG backup, and the whole relay set (87/87B/50/51/50G/27 with 86 lockouts and local reset) - all of that is Westinghouse practice already. WHAT CHANGED: 13.8kV -> 6.9kV buses; motor 8.5MW -> ~7000hp/5.2MW 6-pole; ammeter rescaled; #1 seal leakoff was mislabeled lpm when the value was gpm; the standstill seal (SSS), its N2 supply and its panel pushbutton are DELETED - a standstill seal is a post-2010 backfit with no late-90s equivalent, so seal LOCA now has no quick fix; and the automatic RCP trip on SI is DELETED because Westinghouse plants trip the pumps by hand against the E-0/ES-0.1 subcooling criteria (see RCP-TRIP-CRITERIA and the TRIP REACTOR COOLANT PUMPS annunciator). The upstream electrical chain has MOVED to eps/offsite.json. STILL EPR-ERA AND PENDING: the SBO-* cluster and the RCP MCC alternate feed, which wait on eps/onsite.json. Component-level granularity per decision 2026-07-03. Per-RCP electrical group (master BUS-52 -> RCP-BUS -> FDR-52 motor / MCC-52 aux branch) is a deliberate sim design, not vendor practice, and is kept as-is - real plants feed RCP auxiliaries from shared MCCs. CONTROLS: RCP{n}-CS became a spring-return TRIP/NORMAL/START controller (Rot3pSpring) on 2026-09-09, replacing the maintained rot2p it stood in as. The out-of-correspondence convention went with it - a momentary switch carries no standing run request, so there is nothing for the breaker to be out of correspondence WITH, and nothing that can restart a pump on its own.",
 
   "devices": [
-    {
-      "id": "SWYD-400KV",
-      "name": "400kV switchyard (grid source)",
-      "kind": "bus",
-      "location": "switchyard",
-      "visibility": "hidden",
-      "migrateTo": "EPSS",
-      "states": ["energized", "deenergized"],
-      "initialState": "energized",
-      "actuation": ["auto"],
-      "behavior": "Grid connection. Deenergized = loss of offsite power (LOOP): all downstream normal buses drop, RCPs coast down on flywheels.",
-      "params": { "voltageKV": 400, "approx": true }
-    },
-    {
-      "id": "NAT-{t}",
-      "name": "Normal auxiliary transformer {t}",
-      "kind": "transformer",
-      "location": "transformer-yard",
-      "visibility": "hidden",
-      "migrateTo": "EPSS",
-      "expand": { "t": [1, 2] },
-      "states": ["in-service", "faulted", "isolated"],
-      "initialState": "in-service",
-      "actuation": ["auto", "local"],
-      "behavior": "Steps switchyard voltage down to normal MV buses. NAT-1 feeds NBUS-1, NAT-2 feeds NBUS-2. Fault deenergizes its bus.",
-      "params": { "secondaryKV": 13.8, "approx": true }
-    },
-    {
-      "id": "NBUS-{t}",
-      "name": "13.8kV normal (non-1E) bus {t}",
-      "kind": "bus",
-      "location": "switchgear",
-      "visibility": "hidden",
-      "migrateTo": "EPSS",
-      "expand": { "t": [1, 2] },
-      "states": ["energized", "deenergized"],
-      "initialState": "energized",
-      "actuation": ["auto"],
-      "behavior": "Each normal bus feeds two RCP electrical groups (1&2 on NBUS-1, 3&4 on NBUS-2). Energized iff upstream NAT in-service and switchyard energized. NOT backed by EDGs.",
-      "params": { "voltageKV": 13.8, "approx": true }
-    },
     {
       "id": "SBO-DG-{t}",
       "name": "SBO diesel generator {t} (non-1E)",
       "kind": "motor",
       "location": "sbo-dg-building",
       "visibility": "hidden",
-      "migrateTo": "EPSS",
+      "migrateTo": "EPS-ONSITE",
       "expand": { "t": [1, 2] },
       "states": ["standby", "starting", "running", "failed"],
       "initialState": "standby",
       "actuation": ["auto", "mcr", "local"],
-      "behavior": "Non-Class-1E station blackout diesel. Auto-starts on loss of voltage on its SBO bus; picks up the bus in ~30s. NOT one of the four Class 1E EDGs - those feed safety divisions only.",
+      "behavior": "Non-Class-1E station blackout diesel. Auto-starts on loss of voltage on its SBO bus; picks up the bus in ~30s. NOT one of the two Class 1E EDGs (trains A and B) - those feed the safety buses only.",
       "params": { "startTimeS": 30, "approx": true }
     },
     {
@@ -74,7 +33,7 @@
       "kind": "breaker",
       "location": "switchgear",
       "visibility": "hidden",
-      "migrateTo": "EPSS",
+      "migrateTo": "EPS-ONSITE",
       "expand": { "t": [1, 2] },
       "states": ["open", "closed", "tripped"],
       "initialState": "closed",
@@ -88,12 +47,12 @@
       "kind": "transformer",
       "location": "switchgear",
       "visibility": "hidden",
-      "migrateTo": "EPSS",
+      "migrateTo": "EPS-ONSITE",
       "expand": { "t": [1, 2] },
       "states": ["in-service", "faulted"],
       "initialState": "in-service",
       "actuation": ["auto"],
-      "behavior": "13.8kV -> 480V transformer on the SBO bus normal (grid) feed path.",
+      "behavior": "6.9kV -> 480V transformer on the SBO bus normal (grid) feed path.",
       "params": { "secondaryV": 480, "approx": true }
     },
     {
@@ -102,12 +61,12 @@
       "kind": "bus",
       "location": "switchgear",
       "visibility": "hidden",
-      "migrateTo": "EPSS",
+      "migrateTo": "EPS-ONSITE",
       "expand": { "t": [1, 2] },
       "states": ["energized", "deenergized"],
       "initialState": "energized",
       "actuation": ["auto"],
-      "behavior": "Diesel-backed non-safety 480V distribution/instrumentation bus. Normally grid-fed: NBUS-{t} -> SBO-BUS-{t}-XFMR -> SBO-BUS-{t}-52 (LV main); diesels stay in standby. On loss of normal supply SBO-DG-{t} auto-starts and re-energizes it (~30s). Grid/generator transfer device (SBO-BUS-{t}-ATS) and DG output breaker (SBO-DG-{t}-52) NOT YET MODELED - decided to defer 2026-07-03. Alternate feed source for RCP MCCs (1&2 from SBO-BUS-1, 3&4 from SBO-BUS-2).",
+      "behavior": "PLACEHOLDER, EPR-ERA: this two-diesel / two-480V-bus arrangement is not late-90s Westinghouse practice and awaits eps/onsite.json, where it becomes 480V load centers off the 6.9kV buses with a normally-open cross-tie, plus a single AAC/SBO diesel feeding a 4.16kV safety bus. Left in place unchanged because onsite power is deliberately not designed yet. Diesel-backed non-safety 480V distribution/instrumentation bus. Normally grid-fed: NBUS-{t} -> SBO-BUS-{t}-XFMR -> SBO-BUS-{t}-52 (LV main); diesels stay in standby. On loss of normal supply SBO-DG-{t} auto-starts and re-energizes it (~30s). Grid/generator transfer device (SBO-BUS-{t}-ATS) and DG output breaker (SBO-DG-{t}-52) NOT YET MODELED - decided to defer 2026-07-03. Alternate feed source for RCP MCCs (1&2 from SBO-BUS-1, 3&4 from SBO-BUS-2).",
       "params": { "voltageV": 480, "approx": true }
     },
 
@@ -117,7 +76,7 @@
       "kind": "breaker",
       "location": "switchgear",
       "visibility": "hidden",
-      "migrateTo": "EPSS",
+      "migrateTo": "EPS-ONSITE",
       "states": ["open", "closed", "tripped"],
       "initialState": "open",
       "actuation": ["auto", "local", "mcr"],
@@ -130,7 +89,7 @@
       "kind": "relay",
       "location": "switchgear",
       "visibility": "hidden",
-      "migrateTo": "EPSS",
+      "migrateTo": "EPS-ONSITE",
       "states": ["blocked", "dead-bus-ok", "in-sync"],
       "initialState": "dead-bus-ok",
       "actuation": ["auto"],
@@ -147,7 +106,7 @@
       "states": ["open", "closed", "tripped"],
       "initialState": "closed",
       "actuation": ["auto", "local"],
-      "behavior": "Master breaker for the whole RCP {n} electrical group: feeds RCP{n}-BUS, from which both the motor (via FDR-52) and all auxiliaries (via MCC-52) derive. Tripping it kills everything RCP {n} - motor AND aux power (OLP, lube, SSS solenoid). No MCR control: local operation + BUS-86 lockout trip only. Normally stays closed; routine motor start/stop uses FDR-52.",
+      "behavior": "Master breaker for the whole RCP {n} electrical group: feeds RCP{n}-BUS, from which both the motor (via FDR-52) and all auxiliaries (via MCC-52) derive. Tripping it kills everything RCP {n} - motor AND aux power (OLP, lube oil, instrumentation). No MCR control: local operation + BUS-86 lockout trip only. Normally stays closed; routine motor start/stop uses FDR-52.",
       "params": {}
     },
     {
@@ -159,8 +118,8 @@
       "states": ["energized", "deenergized"],
       "initialState": "energized",
       "actuation": ["auto"],
-      "behavior": "Per-RCP 13.8kV bus downstream of RCP{n}-BUS-52. Two taps: RCP{n}-FDR-52 (motor) and RCP{n}-MCC-52 (auxiliaries). Energized iff RCP{n}-BUS-52 closed and NBUS-{bus} energized.",
-      "params": { "voltageKV": 13.8, "approx": true }
+      "behavior": "Per-RCP 6.9kV bus downstream of RCP{n}-BUS-52. Two taps: RCP{n}-FDR-52 (motor) and RCP{n}-MCC-52 (auxiliaries). Energized iff RCP{n}-BUS-52 closed and NBUS-{bus} energized.",
+      "params": { "voltageKV": 6.9, "approx": true }
     },
     {
       "id": "RCP{n}-BUS-CT-A",
@@ -317,7 +276,7 @@
       "states": ["in-service", "faulted"],
       "initialState": "in-service",
       "actuation": ["auto"],
-      "behavior": "Small 13.8kV -> 480V transformer on the NORMAL feed path, directly off RCP{n}-BUS; output feeds RCP{n}-MCC-52 (LV main). Fault here clears upstream at RCP{n}-BUS level (no MV-side breaker modeled); the ATS transfers auxiliaries to alternate.",
+      "behavior": "Small 6.9kV -> 480V transformer on the NORMAL feed path, directly off RCP{n}-BUS; output feeds RCP{n}-MCC-52 (LV main). Fault here clears upstream at RCP{n}-BUS level (no MV-side breaker modeled); the ATS transfers auxiliaries to alternate.",
       "params": { "secondaryV": 480, "approx": true }
     },
     {
@@ -353,7 +312,7 @@
       "states": ["energized", "deenergized"],
       "initialState": "energized",
       "actuation": ["auto"],
-      "behavior": "480V LV bus for all RCP {n} auxiliaries: oil lift pump, lube oil equipment, machine instrumentation power (SSS solenoid moved to battery 125VDC). Energized iff ATS on a live input: (normal: MCC-52 closed + MCC-XFMR in-service + RCP{n}-BUS energized) OR (alternate: MCC-ALT-52 closed + SBO-BUS-{sbo} energized). Losing it while running: pump keeps running, but no jacking oil for next stop/start - its own casualty.",
+      "behavior": "480V LV bus for all RCP {n} auxiliaries: oil lift pump, lube oil equipment, machine instrumentation power. Energized iff ATS on a live input: (normal: MCC-52 closed + MCC-XFMR in-service + RCP{n}-BUS energized) OR (alternate: MCC-ALT-52 closed + SBO-BUS-{sbo} energized). Losing it while running: pump keeps running, but no jacking oil for next stop/start - its own casualty.",
       "params": { "voltageV": 480, "approx": true }
     },
     {
@@ -378,8 +337,8 @@
       "states": ["stopped", "starting", "running", "coasting"],
       "initialState": "stopped",
       "actuation": ["auto"],
-      "behavior": "Single-speed induction motor, vertical shaft, integral flywheel. FDR-52 closed -> starting (high inrush ~5x FLA, accel ~15s) -> running at sync slip. FDR-52 opens -> coasting: flywheel gives slow coastdown (several minutes to standstill) maintaining core flow during the critical first seconds.",
-      "params": { "ratedMW": 8.5, "ratedSpeedRPM": 1190, "accelTimeS": 15, "coastdownHalfFlowS": 25, "approx": true }
+      "behavior": "Single-speed induction motor, vertical shaft, integral flywheel (Westinghouse Model 93A class: 6-pole, 1189 rpm at 60 Hz, ~7000 hp). Fixed speed - it follows bus frequency, there is nothing to control. FDR-52 closed -> starting (locked-rotor inrush ~6x FLA, and the flywheel holds current well above FLA for a 15-25 s run-up, unlike a normal motor that clears in 2-3 s) -> running at sync slip. FDR-52 opens -> coasting: flywheel gives slow coastdown (several minutes to standstill) maintaining core flow during the critical first seconds.",
+      "params": { "ratedHP": 7000, "ratedMW": 5.2, "ratedSpeedRPM": 1190, "poles": 6, "flaAmps": 500, "lockedRotorAmps": 3000, "accelTimeS": 20, "coastdownHalfFlowS": 25, "approx": true }
     },
     {
       "id": "RCP{n}-OLP",
@@ -415,20 +374,8 @@
       "states": ["ok", "degraded", "failed"],
       "initialState": "ok",
       "actuation": ["auto"],
-      "behavior": "Three-stage controlled-leakage shaft seal. #1 takes nearly full RCS dP; #2 and #3 are staged backups. Degradation raises stage leakoff and shifts dP to next stage. All three failed with pump at pressure = seal LOCA unless SSS closes. Seal cooling from CVCS injection or thermal barrier; loss of BOTH while at pressure degrades seals over ~10-30 min.",
-      "params": { "stage1LeakoffNominalLpm": 3, "approx": true }
-    },
-    {
-      "id": "RCP{n}-SSS",
-      "name": "RCP {n} standstill seal",
-      "kind": "seal",
-      "location": "containment",
-      "visibility": "hidden",
-      "states": ["open", "closed", "failed"],
-      "initialState": "open",
-      "actuation": ["auto", "mcr"],
-      "behavior": "N2-actuated metal-to-metal seal; actuation solenoid powered from battery-backed 125VDC (SBO-proof by design: stored N2 does the work, battery only fires the solenoid). Closes ONLY at standstill (shaft below ~10 rpm); closing on a rotating shaft destroys it. Auto-closes on seal-failure signal at standstill; also MCR-actuated. Stops seal LOCA from a stopped pump with failed seals. Requires N2 accumulator pressure AND DC control power.",
-      "params": { "maxClosureSpeedRPM": 10, "approx": true }
+      "behavior": "Three-stage controlled-leakage shaft seal. #1 takes nearly full RCS dP; #2 and #3 are staged backups. Degradation raises stage leakoff and shifts dP to next stage. All three failed with pump at pressure = seal LOCA. This vintage has no standstill seal, so the only mitigations are restoring seal cooling, isolating the pump, or depressurizing - which is exactly why seal LOCA is a design-basis concern at a late-90s plant. Seal cooling from CVCS injection or thermal barrier; loss of BOTH while at pressure degrades seals over ~10-30 min.",
+      "params": { "stage1LeakoffNominalLpm": 11, "stage1LeakoffNominalGPM": 3, "sealInjectionNominalGPM": 8, "approx": true }
     },
     {
       "id": "RCP{n}-THB",
@@ -452,13 +399,13 @@
       "initialState": "ok",
       "actuation": ["auto"],
       "behavior": "Converts shaft speed to loop flow (flow ~ speed for sim purposes; head-flow curve later). 'damaged' (e.g. debris, cavitation) reduces delivered flow at rated speed.",
-      "params": { "ratedFlowM3H": 27000, "approx": true }
+      "params": { "ratedFlowM3H": 22000, "ratedFlowGPM": 96000, "approx": true }
     }
   ],
 
   "signals": [
     { "id": "RCP{n}-SPEED", "name": "RCP {n} shaft speed", "type": "analog", "unit": "rpm", "source": "RCP{n}-MOTOR", "range": [0, 1300] },
-    { "id": "RCP{n}-AMPS", "name": "RCP {n} motor current", "type": "analog", "unit": "A", "source": "RCP{n}-CT-A", "range": [0, 2500] },
+    { "id": "RCP{n}-AMPS", "name": "RCP {n} motor current", "type": "analog", "unit": "A", "source": "RCP{n}-CT-A", "range": [0, 3500] },
     { "id": "RCP{n}-BRG-TEMP", "name": "RCP {n} bearing temperature (worst of motor/pump)", "type": "analog", "unit": "degC", "source": "RCP{n}-LUBE", "range": [0, 150] },
     { "id": "RCP{n}-VIB", "name": "RCP {n} shaft vibration", "type": "analog", "unit": "mm/s", "source": "RCP{n}-HYD", "range": [0, 25] },
     { "id": "RCP{n}-SEALINJ-FLOW", "name": "RCP {n} seal injection flow", "type": "analog", "unit": "lpm", "source": "external:CVCS", "range": [0, 40] },
@@ -469,14 +416,14 @@
     { "id": "RCP{n}-BUS-52-POS", "name": "RCP {n} master breaker position", "type": "binary", "source": "RCP{n}-BUS-52" },
     { "id": "RCP{n}-FDR-52-POS", "name": "RCP {n} motor breaker position", "type": "binary", "source": "RCP{n}-FDR-52" },
     { "id": "RCP{n}-MCC-52-POS", "name": "RCP {n} aux feeder breaker position", "type": "binary", "source": "RCP{n}-MCC-52" },
-    { "id": "RCP{n}-BUS-VOLTS", "name": "RCP {n} group bus voltage", "type": "analog", "unit": "kV", "source": "RCP{n}-VT", "range": [0, 15] },
+    { "id": "RCP{n}-BUS-VOLTS", "name": "RCP {n} group bus voltage", "type": "analog", "unit": "kV", "source": "RCP{n}-VT", "range": [0, 8] },
     { "id": "RCP{n}-MCC-VOLTS", "name": "RCP {n} MCC voltage", "type": "analog", "unit": "V", "source": "RCP{n}-MCC", "range": [0, 550] },
-    { "id": "NBUS-{t}-VOLTS", "name": "Normal bus {t} voltage", "type": "analog", "unit": "kV", "source": "NBUS-{t}", "range": [0, 15], "expand": { "t": [1, 2] } },
     { "id": "SBO-BUS-{t}-VOLTS", "name": "SBO bus {t} voltage", "type": "analog", "unit": "V", "source": "SBO-BUS-{t}", "range": [0, 550], "expand": { "t": [1, 2] } },
     { "id": "RCP{n}-MCC-ATS-POS", "name": "RCP {n} MCC ATS position", "type": "binary", "source": "RCP{n}-MCC-ATS" },
     { "id": "RCP{n}-RUNNING", "name": "RCP {n} running (derived)", "type": "derived", "source": "logic", "expr": "RCP{n}-FDR-52 == closed AND RCP{n}-SPEED > 1100" },
     { "id": "RCP{n}-AUXPWR-OK", "name": "RCP {n} aux power available (derived)", "type": "derived", "source": "logic", "expr": "RCP{n}-MCC == energized" },
     { "id": "RCP{n}-SEAL-TROUBLE", "name": "RCP {n} seal trouble (derived)", "type": "derived", "source": "logic", "expr": "RCP{n}-LEAKOFF-FLOW > 8 OR RCP{n}-SEAL-TEMP > 90 OR any(RCP{n}-SEAL{s} != ok)" },
+    { "id": "RCP-TRIP-CRITERIA", "name": "RCP trip criteria met (derived)", "type": "derived", "source": "logic", "expr": "ESFAS-SI-ACTUATED AND RCS-SUBCOOLING < 15", "notes": "Westinghouse plants do NOT automatically trip the RCPs on SI - that is an EPR feature, removed in the 2026-09-06 rebase. Tripping the pumps is an OPERATOR action against the ERG criteria in E-0/ES-0.1: SI actuated and subcooling lost. This signal only lights the annunciator that tells the operator to do it; the trip itself is the MCR control switch. Subcooling margin is owned by the future subcooling-monitor / ICC instrumentation file; the 15 degC limit is approx." },
     { "id": "RCP{n}-SEALCOOL-OK", "name": "RCP {n} seal cooling available (derived)", "type": "derived", "source": "logic", "expr": "RCP{n}-SEALINJ-FLOW > 15 OR RCP{n}-THB == cooling" }
   ],
 
@@ -485,29 +432,17 @@
       {
         "id": "RCP{n}-START-PERM",
         "allows": "close RCP{n}-FDR-52",
-        "expr": "RCP{n}-OLP == running AND RCP{n}-OLP-PRESS > 100 AND RCP{n}-SEALCOOL-OK AND RCP{n}-BUS-VOLTS > 12.4 AND RCP{n}-AUXPWR-OK AND RCP{n}-86 == reset AND RCS-PRESS > 25",
-        "notes": "BUS-VOLTS > 12.4 implies master 52 closed and NBUS energized. AUXPWR-OK (MCC alive) required because OLP and instrumentation run from it. RCS-PRESS min for seal dP is a startup-procedure value, approx. Oil lift pre-run time enforced by start sequence, not this permissive."
+        "expr": "RCP{n}-OLP == running AND RCP{n}-OLP-PRESS > 100 AND RCP{n}-SEALCOOL-OK AND RCP{n}-BUS-VOLTS > 6.2 AND RCP{n}-AUXPWR-OK AND RCP{n}-86 == reset AND RCS-PRESS > 25",
+        "notes": "BUS-VOLTS > 6.2 implies master 52 closed and NBUS energized. AUXPWR-OK (MCC alive) required because OLP and instrumentation run from it. RCS-PRESS min for seal dP is a startup-procedure value, approx. Oil lift pre-run time enforced by start sequence, not this permissive."
       },
       {
         "id": "SBO-BT-CLOSE-PERM",
         "allows": "close SBO-BT-52",
         "expr": "SBO-BT-25 == dead-bus-ok OR SBO-BT-25 == in-sync",
         "notes": "Dead-bus: one DG feeds both buses (verify DG capacity vs combined load - overload stalls/trips it). Live-parallel: manual sync by governor trim. Never closable out-of-phase."
-      },
-      {
-        "id": "RCP{n}-SSS-CLOSE-PERM",
-        "allows": "close RCP{n}-SSS",
-        "expr": "RCP{n}-SPEED < 10 AND N2-SUPPLY-OK AND DC-OK",
-        "notes": "Closing on rotating shaft destroys the SSS - sim should enforce and model violation damage. Solenoid on battery DC - works in full SBO."
       }
     ],
     "autoActions": [
-      {
-        "id": "RCP-TRIP-ON-SI",
-        "action": "trip RCP{n}-FDR-52 for ALL n",
-        "expr": "ESFAS-SI-ACTUATED",
-        "notes": "ECCS actuation trips all four RCP motors (LOCA: prevents pumping the break; small-break: preserves loop seal). Master 52 and MCC stay closed - auxiliaries keep running for coastdown. Signal owned by future ESFAS file."
-      },
       {
         "id": "RCP{n}-TRIP-ON-LOCKOUT",
         "action": "trip RCP{n}-FDR-52",
@@ -551,12 +486,6 @@
         "notes": "Loss of both seal injection AND thermal barrier cooling: procedure requires trip; sim auto-backs-up the operator after delay. Delay approx."
       },
       {
-        "id": "RCP{n}-SSS-AUTO",
-        "action": "close RCP{n}-SSS",
-        "expr": "RCP{n}-SEAL-TROUBLE AND RCP{n}-SPEED < 10 AND N2-SUPPLY-OK AND DC-OK",
-        "notes": "Auto standstill-seal closure on seal failure at standstill."
-      },
-      {
         "id": "RCP{n}-OLP-AUTO",
         "action": "run RCP{n}-OLP",
         "expr": "RCP{n}-AUXPWR-OK AND RCP{n}-SPEED < 100 AND (start sequence active OR RCP{n}-MOTOR == coasting)",
@@ -570,7 +499,7 @@
         "steps": [
           "verify RCP{n}-START-PERM except oil-lift timer",
           "start RCP{n}-OLP, wait prestartRunMinM (2 min) with OLP-PRESS > 100 bar",
-          "close RCP{n}-FDR-52 -> motor 'starting', inrush ~5x FLA for accelTimeS",
+          "close RCP{n}-FDR-52 -> motor 'starting', locked-rotor inrush ~6x FLA (~3000 A) decaying over accelTimeS",
           "at RCP{n}-SPEED > 100 rpm stop RCP{n}-OLP",
           "at sync speed motor 'running'; loop flow ramps to rated"
         ]
@@ -583,15 +512,15 @@
       {
         "defName": "RCP{n}-CS",
         "label": "RCP {n} PUMP",
-        "control": { "kind": "rot3p-spring-return", "states": ["STOP", "NEUTRAL", "START"], "notes": "Spring-return-to-neutral variant of Rot3p - controller does not exist yet in Unity" },
-        "drives": "START -> RCP{n}-START-SEQ; STOP -> trip RCP{n}-FDR-52",
+        "control": { "kind": "rot3pSpring", "states": ["trip", "normal", "start"], "notes": "SPRING RETURN TO CENTRE - both ends are momentary commands and the switch rests in NORMAL. START closes FDR-52 if RCP{n}-START-PERM holds; TRIP opens it directly, latching nothing (only protection drives an 86). The breaker holds its own state, so the switch is read for the MOVE onto an end and not for sitting there: a press parks on an end for several report intervals, and acting on the level would reclose the breaker on each one - or reclose it the moment a permissive returned with the operator still holding START. Any trip - lockout, bus loss, seal-cooling trip, operator RCP trip - opens FDR-52 while the switch is already back at NORMAL, so the lamp pair is the only breaker indication and no restart happens without a fresh START. Wire format is Rot3p geometry: left=TRIP, center=NORMAL, right=START." },
+        "drives": "start -> RCP{n}-START-SEQ; trip -> trip RCP{n}-FDR-52",
         "reads": null,
         "layout": { "panel": "RCS", "row": 1, "col": "{n}" }
       },
       {
         "defName": "RCP{n}-BKR-LAMPS",
         "label": "RCP {n}",
-        "control": { "kind": "indicator-lamp-pair", "states": ["green=open", "red=closed"], "notes": "Controller does not exist yet" },
+        "control": { "kind": "indicator-lamp-pair", "states": ["green=open", "red=closed", "both=out of correspondence"], "notes": "SwitchLampIndicator exists; the both-lit mismatch state is the one to add - it is how the operator sees that the pump tripped out from under a switch still sitting in RUN" },
         "drives": null,
         "reads": "RCP{n}-FDR-52-POS",
         "layout": { "panel": "RCS", "row": 2, "col": "{n}" }
@@ -599,7 +528,7 @@
       {
         "defName": "RCP{n}-AMMETER",
         "label": "RCP {n} AMPS",
-        "control": { "kind": "gauge", "range": [0, 2500], "notes": "GE-general-gauge model available in Assets/Controls/Models" },
+        "control": { "kind": "gauge", "range": [0, 1000], "notes": "Panel scale 0-1000 A against ~500 A FLA; the needle pegs during the run-up, which is correct - real ammeters do. GE-general-gauge model available in Assets/Controls/Models" },
         "drives": null,
         "reads": "RCP{n}-AMPS",
         "layout": { "panel": "RCS", "row": 3, "col": "{n}" }
@@ -613,12 +542,12 @@
         "layout": { "panel": "RCS", "row": 4, "col": "{n}" }
       },
       {
-        "defName": "RCP{n}-SSS-PB",
-        "label": "RCP {n} STANDSTILL SEAL",
-        "control": { "kind": "pb-guarded", "states": ["released", "pressed"], "notes": "Guarded pushbutton - controller does not exist yet" },
-        "drives": "close RCP{n}-SSS (gated by RCP{n}-SSS-CLOSE-PERM)",
-        "reads": null,
-        "layout": { "panel": "RCS", "row": 5, "col": "{n}" }
+        "defName": "ANN-RCP-TRIP-CRIT",
+        "label": "TRIP REACTOR COOLANT PUMPS",
+        "control": { "kind": "annunciator", "notes": "Not a per-pump window - one plant-wide window. Replaces the EPR automatic SI trip: it tells the operator that the E-0/ES-0.1 criteria are met and all four pumps must be tripped by hand." },
+        "drives": null,
+        "reads": "RCP-TRIP-CRITERIA",
+        "layout": { "panel": "ANN-RCS", "row": 0, "col": 1 }
       },
       {
         "defName": "ANN-RCP{n}-SEAL",
@@ -665,18 +594,14 @@
   },
 
   "links": [
-    { "from": "SWYD-400KV", "to": "NAT-1", "type": "power" },
-    { "from": "SWYD-400KV", "to": "NAT-2", "type": "power" },
-    { "from": "NAT-1", "to": "NBUS-1", "type": "power" },
-    { "from": "NAT-2", "to": "NBUS-2", "type": "power" },
-    { "from": "NBUS-{bus}", "to": "RCP{n}-BUS-52", "type": "power" },
+    { "from": "external:NBUS-{bus}", "to": "RCP{n}-BUS-52", "type": "power", "notes": "6.9kV normal bus - RCP1&2 on NBUS-1, RCP3&4 on NBUS-2. Owned by eps/offsite.json (the switchyard/MSUT/UAT/RAT chain and both bus incomers live there now)" },
     { "from": "RCP{n}-BUS-52", "to": "RCP{n}-BUS", "type": "power" },
     { "from": "RCP{n}-BUS", "to": "RCP{n}-FDR-52", "type": "power" },
     { "from": "RCP{n}-FDR-52", "to": "RCP{n}-MOTOR", "type": "power", "label": "RCP{n}-FDR", "notes": "the motor feeder; CT-A clamped at breaker end, BUS-CT-B1 at motor terminals, CT-B at motor star point; crosses containment wall via MV power penetration" },
     { "from": "RCP{n}-BUS", "to": "RCP{n}-MCC-XFMR", "type": "power" },
     { "from": "RCP{n}-MCC-XFMR", "to": "RCP{n}-MCC-52", "type": "power", "notes": "LV main breaker at 480V" },
     { "from": "RCP{n}-MCC-52", "to": "RCP{n}-MCC-ATS", "type": "power", "notes": "ATS normal input (480V)" },
-    { "from": "NBUS-{sbo}", "to": "SBO-BUS-{sbo}-XFMR", "type": "power" },
+    { "from": "external:NBUS-{sbo}", "to": "SBO-BUS-{sbo}-XFMR", "type": "power" },
     { "from": "SBO-BUS-{sbo}-XFMR", "to": "SBO-BUS-{sbo}-52", "type": "power", "notes": "LV main breaker at 480V" },
     { "from": "SBO-BUS-{sbo}-52", "to": "SBO-BUS-{sbo}", "type": "power", "notes": "normal (grid) feed path" },
     { "from": "SBO-DG-{sbo}", "to": "SBO-BUS-{sbo}", "type": "power", "notes": "diesel backup; picks up bus ~30s after loss of normal. Transfer device + DG output breaker deferred - direct link for now" },
@@ -691,9 +616,9 @@
     { "from": "RCP{n}-MCC-ATS", "to": "RCP{n}-MCC", "type": "power", "notes": "one input passes at a time - break-before-make" },
     { "from": "RCP{n}-MCC", "to": "RCP{n}-OLP", "type": "power" },
     { "from": "RCP{n}-MCC", "to": "RCP{n}-LUBE", "type": "power", "notes": "lube oil support equipment" },
-    { "from": "external:DC-125", "to": "RCP{n}-SSS", "type": "power", "notes": "actuation solenoid on battery-backed 125VDC - SBO-proof" },
+    { "from": "external:DC-125", "to": "RCP{n}-FDR-52", "type": "power", "notes": "125VDC control power: breaker trip and close coils, protection relays and lockouts" },
 
-    { "from": "RCP{n}-MOTOR", "to": "RCP{n}-HYD", "type": "mech", "notes": "single vertical shaft; passes down through SSS, SEAL3, SEAL2, SEAL1, THB before reaching impeller" },
+    { "from": "RCP{n}-MOTOR", "to": "RCP{n}-HYD", "type": "mech", "notes": "single vertical shaft; passes down through SEAL3, SEAL2, SEAL1, THB before reaching impeller" },
 
     { "from": "RCP{n}-OLP", "to": "RCP{n}-MOTOR", "type": "fluid", "medium": "oil", "notes": "HP jacking oil to thrust bearing" },
     { "from": "RCP{n}-LUBE", "to": "RCP{n}-MOTOR", "type": "fluid", "medium": "oil", "bidirectional": true, "notes": "closed lube circuit to upper/lower bearings" },
@@ -708,7 +633,6 @@
     { "from": "RCP{n}-SEAL1", "to": "RCP{n}-SEAL2", "type": "fluid", "medium": "water", "notes": "residual staged leakage" },
     { "from": "RCP{n}-SEAL2", "to": "RCP{n}-SEAL3", "type": "fluid", "medium": "water" },
     { "from": "RCP{n}-SEAL3", "to": "external:RCDT", "type": "fluid", "medium": "water", "notes": "#2/#3 leakoff to reactor coolant drain tank" },
-    { "from": "external:N2", "to": "RCP{n}-SSS", "type": "fluid", "medium": "N2", "notes": "actuation gas from local accumulator" },
 
     { "from": "external:RCS{n}-XL", "to": "RCP{n}-HYD", "type": "fluid", "medium": "water", "notes": "suction from crossover leg (SG {loop} outlet) - see rcs/loop.json" },
     { "from": "RCP{n}-HYD", "to": "external:RCS{n}-CL", "type": "fluid", "medium": "water", "notes": "discharge to cold leg, loop {loop} - see rcs/loop.json" },
@@ -726,15 +650,13 @@
     { "from": "RCP{n}-BUS-86", "to": "RCP{n}-BUS-52", "type": "control", "notes": "trip + hold master open - whole group dead" },
     { "from": "logic:RCP{n}-START-SEQ", "to": "RCP{n}-FDR-52", "type": "control", "notes": "close command after OLP pre-run" },
     { "from": "logic:RCP{n}-START-SEQ", "to": "RCP{n}-OLP", "type": "control", "notes": "pre-start run; also auto during coastdown < 100 rpm" },
-    { "from": "logic:RCP{n}-SSS-AUTO", "to": "RCP{n}-SSS", "type": "control", "notes": "auto-close at standstill on seal trouble" },
-    { "from": "logic:RCP-TRIP-ON-SI", "to": "RCP{n}-FDR-52", "type": "control", "notes": "ESFAS SI trips all four motor breakers" },
 
-    { "from": "mcr:RCP{n}-CS", "to": "logic:RCP{n}-START-SEQ", "type": "control", "notes": "START position" },
-    { "from": "mcr:RCP{n}-CS", "to": "RCP{n}-FDR-52", "type": "control", "notes": "STOP position = direct trip (bypasses 86 - no local reset needed after normal stop)" },
-    { "from": "mcr:RCP{n}-SSS-PB", "to": "RCP{n}-SSS", "type": "control", "notes": "gated by SSS-CLOSE-PERM" },
+    { "from": "mcr:RCP{n}-CS", "to": "logic:RCP{n}-START-SEQ", "type": "control", "notes": "momentary START end" },
+    { "from": "mcr:RCP{n}-CS", "to": "RCP{n}-FDR-52", "type": "control", "notes": "momentary TRIP end = direct breaker trip (bypasses 86 - no local reset needed after a normal stop)" },
     { "from": "RCP{n}-FDR-52", "to": "mcr:RCP{n}-BKR-LAMPS", "type": "signal" },
     { "from": "RCP{n}-CT-A", "to": "mcr:RCP{n}-AMMETER", "type": "signal" },
     { "from": "external:CVCS", "to": "mcr:RCP{n}-SEALINJ-GAUGE", "type": "signal", "notes": "seal injection flow transmitter" },
+    { "from": "logic:RCP-TRIP-CRITERIA", "to": "mcr:ANN-RCP-TRIP-CRIT", "type": "signal" },
     { "from": "logic:RCP{n}-SEAL-TROUBLE", "to": "mcr:ANN-RCP{n}-SEAL", "type": "signal" },
     { "from": "RCP{n}-LUBE", "to": "mcr:ANN-RCP{n}-BRG", "type": "signal", "notes": "bearing temp > 65C" },
     { "from": "RCP{n}-HYD", "to": "mcr:ANN-RCP{n}-VIB", "type": "signal", "notes": "vibration > 10 mm/s" },
@@ -745,10 +667,9 @@
   "dependencies": [
     { "system": "CVCS", "interface": "seal injection supply from charging pumps", "signals": ["RCP{n}-SEALINJ-FLOW"], "notes": "CVCS file will own charging pumps + seal injection valves; leakoff returns to VCT." },
     { "system": "CCWS", "interface": "cooling to thermal barrier + motor/oil coolers", "signals": ["CCWS-FLOW-RCP{n}"], "notes": "CCWS containment isolation cuts thermal barrier cooling." },
-    { "system": "RCS",  "interface": "loop pressure/flow boundary", "signals": ["RCS-PRESS"], "notes": "Min RCS pressure start permissive; loop flow output feeds core thermal-hydraulics." },
-    { "system": "ESFAS", "interface": "SI actuation trips all RCP motor breakers (FDR-52)", "signals": ["ESFAS-SI-ACTUATED"], "notes": "Owned by future protection-system file." },
-    { "system": "N2", "interface": "standstill seal actuation gas", "signals": ["N2-SUPPLY-OK"], "notes": "Local N2 accumulator per pump." },
+    { "system": "RCS",  "interface": "loop pressure/flow boundary, and subcooling margin for the RCP trip criteria", "signals": ["RCS-PRESS", "RCS-SUBCOOLING"], "notes": "Min RCS pressure start permissive; loop flow output feeds core thermal-hydraulics. RCS-SUBCOOLING comes from the future subcooling-monitor / ICC instrumentation (post-TMI, present at any late-90s plant)." },
+    { "system": "ESFAS", "interface": "SI actuation is one half of the operator RCP trip criteria (with loss of subcooling) - it does NOT trip the pumps automatically in a Westinghouse plant", "signals": ["ESFAS-SI-ACTUATED"], "notes": "Owned by future protection-system file. The reactor trips on SI; the RCPs do not." },
     { "system": "DC-125", "interface": "battery-backed 125VDC control power: breaker trip/close coils, relays, SSS solenoid", "signals": ["DC-OK"], "notes": "Owned by future station DC / EUPS-NUPS file. Survives full SBO for battery duty cycle." },
-    { "system": "EPSS", "interface": "MIGRATION TARGET: SWYD-400KV, NAT-1/2, NBUS-1/2 move to EPSS file when written", "signals": ["NBUS-{t}-VOLTS"], "notes": "Per-RCP group (52, BUS, FDR-52, MCC branch) STAYS in this file - only the shared upstream chain migrates." }
+    { "system": "EPS", "interface": "6.9kV normal bus supply to each RCP group; the shared upstream chain (switchyard, MSUT, generator bus, UAT/RAT, bus incomers, automatic transfer) has MIGRATED to eps/offsite.json", "signals": ["NBUS-{n}-VOLTS", "NBUS-{n}-FREQ"], "notes": "Per-RCP group (BUS-52, BUS, FDR-52, MCC branch) STAYS in this file. STILL PENDING: the SBO-* cluster below is EPR-era and awaits eps/onsite.json - see the migrateTo tags. Bus availability, not the control switch, is what decides whether a pump runs." }
   ]
 }
