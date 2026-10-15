@@ -101,6 +101,7 @@ from collections import Counter
 
 from io_state import ANNOUNCE_RATE, CLEAR_RATE, state
 from rcp_sim import alarm_conditions
+from rod_sim import NOT_SART_SWITCHES
 from rod_sim import alarm_conditions as rod_alarm_conditions
 from turbine_sim import GEN_LOAD, GRID_FREQ, TURBINE_RPM
 from valve_sim import BYPASS_VALVE_POS
@@ -293,6 +294,10 @@ class AnnunciatorSimulation:
         panels = {}
 
         for entry in state.switches():
+            # Named like a SART button, but somebody else's - "RPS Reset".
+            if entry["uid"] in NOT_SART_SWITCHES:
+                continue
+
             found = (classify_sart_switch(entry["id"])
                      or classify_sart_switch(entry["name"]))
             if found is None:

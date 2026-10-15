@@ -37,6 +37,7 @@ public class RotNp : MonoBehaviour, ISwitchControl, IInteractable
 
     [Header("Parts")]
     [SerializeField] private Transform _handle;
+    public Transform Handle => _handle;
 
     [Header("Detents")]
     [Tooltip("The shaft: axis the handle turns about, in the handle's own space.")]
@@ -175,7 +176,7 @@ public class RotNp : MonoBehaviour, ISwitchControl, IInteractable
     {
         // Test in the switch body's frame, not the handle's — the handle
         // rotates, which would tilt the split plane with it.
-        Vector3 localHit = transform.InverseTransformPoint(worldHitPoint);
+        Vector3 localHit = ControlSelection.LocalHit(this, _handle, worldHitPoint);
 
         float value = _splitAxis switch
         {

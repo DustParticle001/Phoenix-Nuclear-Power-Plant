@@ -9,7 +9,7 @@ using UnityEngine;
 // it doesn't. Wire format is Rot2p's ("off"/"on"), so a definition can move
 // between a latching switch and a spring-return one without the server
 // noticing.
-public class Rot2pSpring : MonoBehaviour, ISwitchControl, IHoldInteractable
+public class Rot2pSpring : MonoBehaviour, ITwoPositionControl, IHoldInteractable
 {
     // Position names the server knows this switch by; order matches IsOn.
     private static readonly string[] _positionNames = { "off", "on" };
@@ -23,6 +23,7 @@ public class Rot2pSpring : MonoBehaviour, ISwitchControl, IHoldInteractable
 
     [Header("Parts")]
     [SerializeField] private Transform _handle;
+    public Transform Handle => _handle;
 
     [Header("Rotation Config")]
     [SerializeField] private Vector3 _onRotation  = new Vector3(0f, -35f, 0f);

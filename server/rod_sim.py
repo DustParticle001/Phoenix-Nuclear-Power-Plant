@@ -32,11 +32,13 @@ get files of their own:
     Boric Acid Control  Rot3pSpring, BORATE / HOLD / DILUTE, on the CVCS
                         section. A level, like the rod lever. Chemical shim -
                         see the boron block below.
-    RPS A/B Trip        Trans2pSpring pushbuttons, one per train. Read as
-    RPS A/B Close       EDGES, unlike the levers: a button is one command
-                        however long a thumb sits on it. CLOSE is the reset -
-                        resetting a reactor trip is closing the trip breaker,
-                        and see RPS_RESET for why it must not be called that.
+    RPS A/B Trip        Trans2pSpring pushbuttons, one per train, and one
+    RPS Reset           reset for both. Read as EDGES, unlike the levers: a
+                        button is one command however long a thumb sits on it.
+                        Resetting a reactor trip is closing the trip breakers -
+                        see RPS_RESET for what its name costs.
+    RPS A/B State       Lamps, one per train, lit while that train's breaker
+                        is open.
 
 THE INDICATION. Ten meters beside them: the APRM reading reactor power 0-120 %
 of rated, a period meter, and one 0-228 step position meter per bank. The bank
@@ -91,8 +93,9 @@ PERIOD_MAX_SECONDS for how the dial reads.
 
 PROTECTION. Two trip breakers, RTA and RTB, in series in the rod drive supply,
 so either one open drops every bank to the bottom in ROD_DROP_SECONDS. Each has
-a trip and a reset pushbutton on the panel, and a breaker will not reset while
-flux is still above the setpoint - the same sealed-in rule the RCP lockouts use.
+a trip pushbutton and a state lamp on the panel; one reset pushbutton closes
+both, and a breaker will not reset while flux is still above the setpoint - the
+same sealed-in rule the RCP lockouts use.
 
 One automatic function opens them both: power range neutron flux high. That is
 a stand-in for RPS, which is a system of its own and not written yet - the real
@@ -136,25 +139,30 @@ PERIOD = "15001ded-baa5-4601-b1c1-bea403032f01"     # Period.asset, seconds
 CVCS_SWITCH = "02d05332-5bbd-47ab-86bb-9695a6979e29"    # boric acid control
 BORIC_ACID = "47c04141-4b12-47f4-8586-ffba5a356ece"     # Boric Acid, % of range
 
-# RPS, under Controls/Definitions/RPS Section. Two trains, a trip and a reset
-# pushbutton each (Trans2pSpring, so released/pressed).
+# RPS, under Controls/Definitions/MRCS Section. A trip pushbutton per train, one
+# reset pushbutton for both (Trans2pSpring, so released/pressed), and a state
+# lamp per train that is lit while that train's breaker is open.
 #
-# The reset buttons are called CLOSE on both sides, which is what they do -
-# resetting a reactor trip is closing the trip breaker. They are not called
-# "reset" because annunciator_sim.py classifies SART buttons off the tail of a
-# switch's name: anything ending in "Reset" reads as an alarm reset, and a
-# cluster whose group matches no rack falls back to commanding every window on
-# the plant. "RPS A Reset" would therefore have cleared every ringback in the
-# control room. Anything not ending in acknowledge/ack/silence/reset/test is
-# safe to rename these to.
+# The reset is called "RPS Reset", and annunciator_sim.py classifies SART
+# buttons off the tail of a switch's name: anything ending in "Reset" reads as
+# an alarm reset, and a cluster whose group matches no rack falls back to
+# commanding every window on the plant. So it is listed in NOT_SART_SWITCHES,
+# which annunciator_sim skips - without that, resetting the reactor trip would
+# also clear every ringback in the control room.
 RPS_TRIP = {"A": "bcc2377b-7888-422f-b6b6-e593db85bf9d",
             "B": "f0541f68-6757-4d71-a5ad-e9f5563b288b"}
-RPS_RESET = {"A": "a05647e9-c7b0-4a43-8209-eac5a3719b7e",
-             "B": "63388349-c123-433e-bd00-be525a84f918"}
+RPS_RESET = "a05647e9-c7b0-4a43-8209-eac5a3719b7e"
+RPS_STATE = {"A": "1c3eecf2-9980-4712-ae65-a28550261474",
+             "B": "f232768d-a2ac-4f1b-8fad-e343b73529e4"}
 RPS_TRAINS = ("A", "B")
 
-# What the two pushbuttons per train are called on the wire and on the panel.
-RPS_BUTTON_NAMES = {"trip": "Trip", "reset": "Close"}
+# Switches whose names read like SART buttons but are not. annunciator_sim.py
+# leaves these alone.
+NOT_SART_SWITCHES = frozenset({RPS_RESET})
+
+# What a train's state lamp shows. The client knows red/green/off.
+RPS_STATE_TRIPPED = "red"
+RPS_STATE_NORMAL = "off"
 
 # ---------------------------------------------------------------- the machine
 
@@ -945,19 +953,20 @@ class RodCore:
             self.trip(f"power range neutron flux high ({self.power:.0f} % of rated)")
 
     def _step_rps(self):
-        """The four pushbuttons, on the tick each one goes down.
+        """The three pushbuttons, on the tick each one goes down.
 
-        One button per train, which is not quite the real arrangement: a
+        One trip button per train, which is not quite the real arrangement: a
         Westinghouse manual trip is two pushbuttons either of which
-        de-energizes BOTH trains. Per-train is what the four buttons on this
-        panel are for, and the series breakers make the result the same - a
-        single press still drops every rod.
+        de-energizes BOTH trains. Per-train is what the buttons on this panel
+        are for, and the series breakers make the result the same - a single
+        press still drops every rod. The one reset closes whichever breakers
+        are open.
         """
         for train in RPS_TRAINS:
             if self._button_edge(RPS_TRIP[train]):
                 self.open_breaker(train, f"manual trip, train {train}")
-            if self._button_edge(RPS_RESET[train]):
-                self.close_breaker(train)
+        if self._button_edge(RPS_RESET):
+            self._reset()
 
     def _step_boron(self, dt):
         """Borate or dilute for as long as the switch is held."""
@@ -1105,16 +1114,26 @@ class RodSimulation:
                 position=CVCS_HOLD, save=False)
             created += 1
 
+        buttons = [(RPS_TRIP[train], f"RPS {train} Trip") for train in RPS_TRAINS]
+        buttons.append((RPS_RESET, "RPS Reset"))
+        for uid, name in buttons:
+            entry = state.get_switch(uid)
+            # The reset used to be "RPS A Close", one of a pair; an entry
+            # left under that name is corrected rather than kept.
+            if entry is not None and entry["id"] == name:
+                continue
+            state.define_switch(uid, id=name, name=name,
+                                positions=list(BUTTON_POSITIONS),
+                                position="released", save=False)
+            created += 1
+
         for train in RPS_TRAINS:
-            for uid, what in ((RPS_TRIP[train], RPS_BUTTON_NAMES["trip"]),
-                              (RPS_RESET[train], RPS_BUTTON_NAMES["reset"])):
-                if state.get_switch(uid) is not None:
-                    continue
-                name = f"RPS {train} {what}"
-                state.define_switch(uid, id=name, name=name,
-                                    positions=list(BUTTON_POSITIONS),
-                                    position="released", save=False)
-                created += 1
+            if state.get_indicator(RPS_STATE[train]) is not None:
+                continue
+            name = f"RPS {train} State"
+            state.define_indicator(RPS_STATE[train], id=name, name=name,
+                                   state=RPS_STATE_NORMAL, save=False)
+            created += 1
 
         created += self._ensure_gauge(RX_POWER, "APRM", "%", 120.0)
         created += self._ensure_gauge(BORIC_ACID, "Boric Acid", "%", 100.0,
@@ -1186,3 +1205,9 @@ class RodSimulation:
 
         for bank, uid in BANK_GAUGES.items():
             state.set_gauge(uid, float(self.core.banks[bank]))
+
+        # A no-op when nothing changed, same as the gauges.
+        for train in RPS_TRAINS:
+            state.set_indicator(
+                RPS_STATE[train],
+                RPS_STATE_NORMAL if self.core.rps_closed[train] else RPS_STATE_TRIPPED)

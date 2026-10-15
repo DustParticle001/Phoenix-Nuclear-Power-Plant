@@ -10,7 +10,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 221bfa345ae84f44ea1171627c71275e, type: 3}
-  m_Name: RPS B Close
+  m_Name: RPS A State
   m_EditorClassIdentifier: Assembly-CSharp::SwitchDefinition
-  _id: 63388349-c123-433e-bd00-be525a84f918
+  _id: 1c3eecf2-9980-4712-ae65-a28550261474
   displayName:

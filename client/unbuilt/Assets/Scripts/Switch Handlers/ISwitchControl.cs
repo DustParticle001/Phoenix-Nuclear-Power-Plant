@@ -14,6 +14,10 @@ public interface ISwitchControl
     // The definition itself, for its asset name and display name. May be null.
     SwitchDefinition Definition { get; }
 
+    // The part that moves - handle or cap. Tells controllers apart when one
+    // GameObject carries several; see ControlSelection. May be null.
+    UnityEngine.Transform Handle { get; }
+
     // Every position this switch can be in, in order.
     string[] Positions { get; }
 
@@ -22,4 +26,15 @@ public interface ISwitchControl
 
     // Move it, as the server says. Unknown names are ignored with a warning.
     void SetPosition(string position);
+}
+
+// A control with two positions and a state change to listen to: Rot2p,
+// Rot2pSpring, Trans2p, Trans2pSpring. What SwitchLampIndicator follows locally.
+// IsOn is "on" for a switch and "pressed" for a button - the second of the two
+// positions either way.
+public interface ITwoPositionControl : ISwitchControl
+{
+    bool IsOn { get; }
+
+    event System.Action<bool> OnStateChanged;
 }

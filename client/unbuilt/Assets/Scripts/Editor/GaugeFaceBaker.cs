@@ -18,6 +18,12 @@ public static class GaugeFaceBaker
 {
     public static void Bake(GaugeDefinition def)
     {
+        if (def is BarGaugeDefinition bar)
+        {
+            BarGaugeFaceBaker.Bake(bar);
+            return;
+        }
+
         if (def.maxValue <= def.minValue || def.majorTickInterval <= 0f)
         {
             Debug.LogError($"[GaugeFaceBaker] '{def.name}': maxValue must exceed minValue and majorTickInterval must be positive.");
@@ -97,47 +103,9 @@ public static class GaugeFaceBaker
         // Units sit 2x their own size below the name's mirror position, clear of the needle hub.
         DrawString(text, font, def.units, textPx, center + new Vector2(0f, -(0.30f + 2f * def.textSize) * radius), textColor);
 
-        // --- Render both meshes into a RenderTexture and read back ---
-        var colorMat = new Material(Shader.Find("Hidden/Internal-Colored")) { hideFlags = HideFlags.HideAndDontSave };
-        colorMat.SetInt("_SrcBlend", (int)BlendMode.SrcAlpha);
-        colorMat.SetInt("_DstBlend", (int)BlendMode.OneMinusSrcAlpha);
-        colorMat.SetInt("_Cull", (int)CullMode.Off);
-        colorMat.SetInt("_ZWrite", 0);
-        colorMat.SetInt("_ZTest", (int)CompareFunction.Always);
-
-        var rt = new RenderTexture(size, size, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB)
-        {
-            antiAliasing = 8
-        };
-        rt.Create();
-
-        Mesh geoMesh = geo.Build();
-        Mesh textMesh = text.Build();
-
-        var cb = new CommandBuffer { name = "Bake Gauge Face" };
-        cb.SetRenderTarget(rt);
-        cb.ClearRenderTarget(true, true, def.faceColor.linear);
-        Matrix4x4 proj = Matrix4x4.Ortho(0f, size, 0f, size, -100f, 100f);
-        cb.SetViewProjectionMatrices(Matrix4x4.identity, GL.GetGPUProjectionMatrix(proj, true));
-        cb.DrawMesh(geoMesh, Matrix4x4.identity, colorMat);
-        cb.DrawMesh(textMesh, Matrix4x4.identity, font.material); // GUI/Text shader, tinted by vertex color
-        Graphics.ExecuteCommandBuffer(cb);
-        cb.Release();
-
-        var prevActive = RenderTexture.active;
-        RenderTexture.active = rt;
-        var baked = new Texture2D(size, size, TextureFormat.RGBA32, false);
-        baked.ReadPixels(new Rect(0f, 0f, size, size), 0, 0);
-        baked.Apply();
-        RenderTexture.active = prevActive;
-
-        // The CommandBuffer render reads back vertically flipped (render-
-        // target convention on D3D); mirror the rows back, then add the
-        // definition's UV-compensation turn (quarter turns, counter-clockwise).
-        Color32[] src = baked.GetPixels32();
-        var pixels = new Color32[src.Length];
-        for (int y = 0; y < size; y++)
-            System.Array.Copy(src, (size - 1 - y) * size, pixels, y * size, size);
+        // --- Render, then add the definition's UV-compensation turn
+        // (quarter turns, counter-clockwise) ---
+        Color32[] pixels = Render(size, size, def.faceColor, geo, text, font);
 
         int quarters = def.bakeRotation switch
         {
@@ -159,10 +127,54 @@ public static class GaugeFaceBaker
                     };
             pixels = rotated;
         }
-        baked.SetPixels32(pixels);
-        baked.Apply();
+        Save(def, EncodePng(size, size, pixels), size);
+    }
 
-        byte[] png = baked.EncodeToPNG();
+    // Renders the vertex-colored geometry and font-atlas text meshes into a
+    // width x height image (y-up pixel space, origin bottom-left) and returns
+    // its pixels bottom row first. No cameras or scene objects are involved.
+    internal static Color32[] Render(int width, int height, Color clear,
+        MeshBuilder geo, MeshBuilder text, Font font)
+    {
+        var colorMat = new Material(Shader.Find("Hidden/Internal-Colored")) { hideFlags = HideFlags.HideAndDontSave };
+        colorMat.SetInt("_SrcBlend", (int)BlendMode.SrcAlpha);
+        colorMat.SetInt("_DstBlend", (int)BlendMode.OneMinusSrcAlpha);
+        colorMat.SetInt("_Cull", (int)CullMode.Off);
+        colorMat.SetInt("_ZWrite", 0);
+        colorMat.SetInt("_ZTest", (int)CompareFunction.Always);
+
+        var rt = new RenderTexture(width, height, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB)
+        {
+            antiAliasing = 8
+        };
+        rt.Create();
+
+        Mesh geoMesh = geo.Build();
+        Mesh textMesh = text.Build();
+
+        var cb = new CommandBuffer { name = "Bake Gauge Face" };
+        cb.SetRenderTarget(rt);
+        cb.ClearRenderTarget(true, true, clear.linear);
+        Matrix4x4 proj = Matrix4x4.Ortho(0f, width, 0f, height, -100f, 100f);
+        cb.SetViewProjectionMatrices(Matrix4x4.identity, GL.GetGPUProjectionMatrix(proj, true));
+        cb.DrawMesh(geoMesh, Matrix4x4.identity, colorMat);
+        cb.DrawMesh(textMesh, Matrix4x4.identity, font.material); // GUI/Text shader, tinted by vertex color
+        Graphics.ExecuteCommandBuffer(cb);
+        cb.Release();
+
+        var prevActive = RenderTexture.active;
+        RenderTexture.active = rt;
+        var baked = new Texture2D(width, height, TextureFormat.RGBA32, false);
+        baked.ReadPixels(new Rect(0f, 0f, width, height), 0, 0);
+        baked.Apply();
+        RenderTexture.active = prevActive;
+
+        // The CommandBuffer render reads back vertically flipped (render-
+        // target convention on D3D); mirror the rows back.
+        Color32[] src = baked.GetPixels32();
+        var pixels = new Color32[src.Length];
+        for (int y = 0; y < height; y++)
+            System.Array.Copy(src, (height - 1 - y) * width, pixels, y * width, width);
 
         Object.DestroyImmediate(geoMesh);
         Object.DestroyImmediate(textMesh);
@@ -171,7 +183,24 @@ public static class GaugeFaceBaker
         rt.Release();
         Object.DestroyImmediate(rt);
 
-        // --- Save PNG + material beside the definition, link them back ---
+        return pixels;
+    }
+
+    internal static byte[] EncodePng(int width, int height, Color32[] pixels)
+    {
+        var tex = new Texture2D(width, height, TextureFormat.RGBA32, false);
+        tex.SetPixels32(pixels);
+        tex.Apply();
+        byte[] png = tex.EncodeToPNG();
+        Object.DestroyImmediate(tex);
+        return png;
+    }
+
+    // Saves the PNG + an HDRP/Lit material beside the definition (in "images"
+    // and "materials" subfolders) and links both back into it. The material
+    // takes the definition's tiling/offset. maxDimension is the image's longest side.
+    internal static void Save(GaugeDefinition def, byte[] png, int maxDimension)
+    {
         string dir = Path.GetDirectoryName(AssetDatabase.GetAssetPath(def)).Replace('\\', '/');
         string imageDir = EnsureFolder(dir, "images");
         string materialDir = EnsureFolder(dir, "materials");
@@ -184,9 +213,9 @@ public static class GaugeFaceBaker
         AssetDatabase.ImportAsset(texPath);
 
         var importer = (TextureImporter)AssetImporter.GetAtPath(texPath);
-        if (importer.maxTextureSize < size)
+        if (importer.maxTextureSize < maxDimension)
         {
-            importer.maxTextureSize = Mathf.NextPowerOfTwo(size);
+            importer.maxTextureSize = Mathf.NextPowerOfTwo(maxDimension);
             importer.SaveAndReimport();
         }
         var faceTex = AssetDatabase.LoadAssetAtPath<Texture2D>(texPath);
@@ -262,14 +291,27 @@ public static class GaugeFaceBaker
                 def.markingColor.linear);
     }
 
-    private static void RequestGlyphs(Font font, string s, float px)
+    internal static void RequestGlyphs(Font font, string s, float px)
     {
         if (font.dynamic && !string.IsNullOrEmpty(s))
             font.RequestCharactersInTexture(s, Mathf.RoundToInt(px));
     }
 
+    // Advance width of a string at px, in pixels. Glyphs must already be requested.
+    internal static float MeasureString(Font font, string s, float px)
+    {
+        if (string.IsNullOrEmpty(s)) return 0f;
+        int reqSize = font.dynamic ? Mathf.RoundToInt(px) : 0;
+        float scale = font.dynamic ? 1f : px / Mathf.Max(1, font.fontSize);
+        float width = 0f;
+        foreach (char ch in s)
+            if (font.GetCharacterInfo(ch, out CharacterInfo ci, reqSize))
+                width += ci.advance * scale;
+        return width;
+    }
+
     // Lays a string out as font-atlas quads, centred on `center` (both axes).
-    private static void DrawString(MeshBuilder mb, Font font, string s, float px,
+    internal static void DrawString(MeshBuilder mb, Font font, string s, float px,
         Vector2 center, Color color)
     {
         if (string.IsNullOrEmpty(s)) return;
@@ -310,7 +352,7 @@ public static class GaugeFaceBaker
         }
     }
 
-    private class MeshBuilder
+    internal class MeshBuilder
     {
         private readonly List<Vector3> _vertices = new List<Vector3>();
         private readonly List<Vector2> _uvs = new List<Vector2>();

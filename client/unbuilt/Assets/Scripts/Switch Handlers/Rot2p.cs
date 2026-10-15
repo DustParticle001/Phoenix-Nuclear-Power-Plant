@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public class Rot2p : MonoBehaviour, ISwitchControl, IInteractable
+public class Rot2p : MonoBehaviour, ITwoPositionControl, IInteractable
 {
     public enum SplitAxis { X, Y, Z }
 
@@ -16,6 +16,7 @@ public class Rot2p : MonoBehaviour, ISwitchControl, IInteractable
 
     [Header("Parts")]
     [SerializeField] private Transform _handle;
+    public Transform Handle => _handle;
 
     [Header("State")]
     [Tooltip("State the switch starts in on scene load.")]
@@ -69,7 +70,7 @@ public class Rot2p : MonoBehaviour, ISwitchControl, IInteractable
     {
         // Test in the switch body's frame, not the handle's — the handle
         // rotates, which would tilt the left/right split plane with it.
-        Vector3 localHit = transform.InverseTransformPoint(worldHitPoint);
+        Vector3 localHit = ControlSelection.LocalHit(this, _handle, worldHitPoint);
 
         float value = _splitAxis switch
         {

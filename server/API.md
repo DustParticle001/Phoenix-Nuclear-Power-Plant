@@ -848,37 +848,38 @@ three quarters of a minute — see
 ### RPS — the trip breakers
 
 Also temporary, also in `rod_sim.py`: these are the last two inches of a system
-with a couple of dozen inputs, and the rest of it isn't written. Four
-pushbuttons under `Controls/Definitions/RPS Section`.
+with a couple of dozen inputs, and the rest of it isn't written. Three
+pushbuttons and two lamps under `Controls/Definitions/MRCS Section`.
 
-| Signal | Uid | Positions | Direction |
+| Signal | Uid | Positions / states | Direction |
 | --- | --- | --- | --- |
 | RPS A Trip | `bcc2377b` | `released` / `pressed` | in |
 | RPS B Trip | `f0541f68` | `released` / `pressed` | in |
-| RPS A Close | `a05647e9` | `released` / `pressed` | in |
-| RPS B Close | `63388349` | `released` / `pressed` | in |
+| RPS Reset | `a05647e9` | `released` / `pressed` | in |
+| RPS A State | `1c3eecf2` | `red` / `off` | out (indicator) |
+| RPS B State | `f232768d` | `red` / `off` | out (indicator) |
 
 RTA and RTB sit in **series** in the rod drive supply, so **either one open
-drops every rod**. Each train has its own trip and its own reset, and one
-automatic function — power range flux high — opens both.
+drops every rod**. Each train has its own trip button and its own state lamp,
+lit `red` while that train's breaker is open. The one reset closes whichever
+breakers are open and puts both lamps out. One automatic function — power range
+flux high — opens both.
 
 Unlike the rod lever these are read as **edges**: a pushbutton is one command
 however long a thumb sits on it, so holding the trip button down does not stop
 the breaker being closed again. A breaker will not close while flux is still at
 or above the setpoint — the same sealed-in rule the RCP lockouts follow.
 
-> **The reset buttons are called CLOSE, and must not be called Reset.**
-> `annunciator_sim.py` classifies SART buttons off the tail of a switch's name:
-> anything ending in `Reset` reads as an alarm reset, and a cluster whose group
-> matches no rack falls back to commanding **every window on the plant**. So
-> `RPS A Reset` would have cleared every ringback in the control room the first
-> time anyone pressed it. Close is also the right word — resetting a reactor
-> trip *is* closing the trip breaker. Rename these to anything that doesn't end
-> in acknowledge / ack / silence / reset / test.
+> **RPS Reset is excluded from SART classification.** `annunciator_sim.py`
+> classifies SART buttons off the tail of a switch's name: anything ending in
+> `Reset` reads as an alarm reset, and a cluster whose group matches no rack
+> falls back to commanding **every window on the plant**. The reset's uid is in
+> `rod_sim.NOT_SART_SWITCHES`, which `annunciator_sim.py` skips — any other
+> switch named like a SART button that isn't one belongs in that set too.
 
 Note one divergence from the real thing: a Westinghouse manual trip is two
 pushbuttons **either** of which de-energizes **both** trains. Per-train is what
-the four buttons on this panel are for, and the series breakers make the
+the trip buttons on this panel are for, and the series breakers make the
 outcome the same — one press still drops every rod.
 
 ## RCS temperatures

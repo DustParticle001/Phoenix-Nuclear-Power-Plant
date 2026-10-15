@@ -1,8 +1,18 @@
 using UnityEngine;
 
-// Drives the Red/Green lamp pair on a switch. Mirrors the state of a Rot2p
-// switch: ON → Red lit / Green dark, OFF → Red dark / Green lit.
+// Drives the Red/Green lamp pair on a switch or button. Follows any
+// two-position control - Rot2p, Rot2pSpring, Trans2p, Trans2pSpring - with
+// "lit" meaning Red lit / Green dark and "dark" the other way round.
 // Add this to the "switch lamps" object.
+//
+// What "lit" follows is the Mode:
+//   Normal   - the control's state: lit while on / pressed.
+//   Latching - each press flips it: press once and it stays lit, press again
+//              and it goes dark. A momentary button that lights up and stays.
+//   Blink    - each press lights it for Blink Seconds, then it goes dark on
+//              its own. A press restarts the time.
+// "Press" is the control going on / pressed; letting go does nothing in
+// Latching and Blink.
 //
 // Nothing below has to be wired up. Assign what the lamp actually has - one
 // mesh or two, and whichever of the four materials exist. A half with no mesh
@@ -23,6 +33,8 @@ public class SwitchLampIndicator : MonoBehaviour
 {
     public enum LampState { Off, Red, Green }
 
+    public enum Mode { Normal, Latching, Blink }
+
     // Flash half-period. A lit lamp alternates lit/dark while flashing.
     private const float FlashSeconds = 0.35f;
 
@@ -32,6 +44,14 @@ public class SwitchLampIndicator : MonoBehaviour
 
     [Tooltip("Swap the mapping: ON → Green lit, OFF → Red lit.")]
     [SerializeField] private bool _invertColors = false;
+
+    [Header("Behaviour")]
+    [Tooltip("Normal: lit while the control is on/pressed. Latching: each press toggles it. "
+        + "Blink: each press lights it for Blink Seconds.")]
+    [SerializeField] private Mode _mode = Mode.Normal;
+
+    [Tooltip("Blink only. How long a press keeps the lamp lit, in seconds.")]
+    [SerializeField] private float _blinkSeconds = 1f;
 
     [Header("Lamp Meshes")]
     [Tooltip("Both optional. Auto-found by child name (\"Red\"/\"Green\") if left empty, "
@@ -47,7 +67,12 @@ public class SwitchLampIndicator : MonoBehaviour
     [SerializeField] private Material _greenUnlit; // Lamp Green
     [SerializeField] private Material _greenLit;   // Lamp Green Lit
 
-    private Rot2p _switch;
+    private ITwoPositionControl _switch;
+
+    // What the local control says, by the Mode. Kept up while the server owns
+    // the lamps, so handing them back shows where the switch actually is.
+    private bool _localLit;
+    private float _blinkRemaining;
 
     private bool _serverDriven;
     private LampState _serverState = LampState.Off;
@@ -79,9 +104,7 @@ public class SwitchLampIndicator : MonoBehaviour
             if (_definition != null && !string.IsNullOrWhiteSpace(_definition.Id))
                 return _definition.Id;
 
-            // Inactive included: IoSync's scan finds controls on inactive
-            // objects, and a lamp it can see has to resolve the same way.
-            var owner = GetComponentInParent<ISwitchControl>(true);
+            var owner = Owner();
             if (owner != null)
                 return owner.Id;
 
@@ -92,10 +115,18 @@ public class SwitchLampIndicator : MonoBehaviour
     // Editor-only: runs when the component is first added (or Reset is clicked).
     private void Reset()
     {
-        var sw = GetComponentInParent<Rot2p>();
+        var sw = Owner() as ITwoPositionControl;
         if (sw != null && sw.Definition != null)
             _definition = sw.Definition;
     }
+
+    // The switch this lamp hangs under. Not GetComponentInParent: one object
+    // can carry several controllers - a station of lit pushbuttons - and each
+    // lamp belongs to the one whose cap it sits in, or failing that the one it
+    // sits nearest. Inactive included: IoSync's scan finds controls on inactive
+    // objects, and a lamp it can see has to resolve the same way.
+    private ISwitchControl Owner() =>
+        ControlSelection.Pick<ISwitchControl>(transform, transform.position);
 
     private void Start()
     {
@@ -104,28 +135,52 @@ public class SwitchLampIndicator : MonoBehaviour
         _switch = FindSwitch();
         if (_switch == null)
         {
-            // Three ways to have no local switch to mirror, and only one is a
-            // mistake. A lamp with no definition and nothing above it is a
-            // panel light the server drives alone - a pump run light. A lamp on
-            // a switch that isn't a Rot2p has nothing local to follow either: a
-            // spring-return controller has no on/off, it has two momentary
-            // ends, and the server names the lamp outright. Both are ways of
-            // using this. Naming a switch that nothing answers to is not.
-            if (_definition != null && !AnySwitchAnswersTo(_definition.Id))
-                Debug.LogWarning(
-                    $"[SwitchLampIndicator] '{name}' found no switch with ID {_definition.Id}.");
-
+            // No local switch to follow: the server drives this lamp alone. A
+            // panel light with no definition - a pump run light - or one whose
+            // definition is an indicator of its own rather than a switch's (RPS
+            // A State), or one on a control with more than two positions, which
+            // has no single on/off to mirror. Not warned about, because a
+            // definition naming no switch is how an indicator-only lamp is
+            // bound; a typo'd one shows up as a lamp the server never lights.
             return;
         }
 
-        _switch.OnStateChanged += Apply;
-        Apply(_switch.IsOn);
+        // Normal starts where the control is. Latching and Blink start dark: a
+        // control that starts on hasn't been pressed.
+        _localLit = _mode == Mode.Normal && _switch.IsOn;
+        _switch.OnStateChanged += OnSwitchChanged;
+        ApplyLocal();
     }
 
     private void OnDestroy()
     {
         if (_switch != null)
-            _switch.OnStateChanged -= Apply;
+            _switch.OnStateChanged -= OnSwitchChanged;
+    }
+
+    private void OnSwitchChanged(bool isOn)
+    {
+        switch (_mode)
+        {
+            case Mode.Normal:
+                _localLit = isOn;
+                break;
+
+            case Mode.Latching:
+                if (isOn)
+                    _localLit = !_localLit;
+                break;
+
+            case Mode.Blink:
+                if (isOn)
+                {
+                    _localLit = true;
+                    _blinkRemaining = Mathf.Max(0f, _blinkSeconds);
+                }
+                break;
+        }
+
+        ApplyLocal();
     }
 
     private void ResolveMeshes()
@@ -188,26 +243,15 @@ public class SwitchLampIndicator : MonoBehaviour
         renderer.sharedMaterials = materials;
     }
 
-    // Any control answering to this id, Rot2p or not. Only asked on the path
-    // where no Rot2p matched, so the cost lands once and only on a lamp that
-    // would otherwise be warned about.
-    private static bool AnySwitchAnswersTo(string id)
-    {
-        foreach (var behaviour in FindObjectsByType<MonoBehaviour>(
-                     FindObjectsInactive.Include, FindObjectsSortMode.None))
-            if (behaviour is ISwitchControl control && control.Id == id)
-                return true;
-
-        return false;
-    }
-
-    private Rot2p FindSwitch()
+    private ITwoPositionControl FindSwitch()
     {
         if (_definition == null)
-            return GetComponentInParent<Rot2p>();
+            return Owner() as ITwoPositionControl;
 
-        foreach (var sw in FindObjectsByType<Rot2p>(FindObjectsInactive.Include, FindObjectsSortMode.None))
-            if (sw.Id == _definition.Id)
+        // FindObjectsByType can't search for an interface, so go wide and filter.
+        foreach (var behaviour in FindObjectsByType<MonoBehaviour>(
+                     FindObjectsInactive.Include, FindObjectsSortMode.None))
+            if (behaviour is ITwoPositionControl sw && sw.Id == _definition.Id)
                 return sw;
 
         return null;
@@ -215,6 +259,19 @@ public class SwitchLampIndicator : MonoBehaviour
 
     private void Update()
     {
+        // Blink runs down whoever owns the lamps, so the local state is right
+        // if the server hands them back mid-blink.
+        if (_blinkRemaining > 0f)
+        {
+            _blinkRemaining -= Time.deltaTime;
+            if (_blinkRemaining <= 0f)
+            {
+                _blinkRemaining = 0f;
+                _localLit = false;
+                ApplyLocal();
+            }
+        }
+
         if (!_serverDriven || !_flashing)
             return;
 
@@ -254,7 +311,7 @@ public class SwitchLampIndicator : MonoBehaviour
         _serverDriven = false;
         _flashing = false;
         if (_switch != null)
-            Apply(_switch.IsOn);
+            ApplyLocal();
     }
 
     private static LampState ParseState(string state)
@@ -274,13 +331,13 @@ public class SwitchLampIndicator : MonoBehaviour
                    lit && _serverState == LampState.Green);
     }
 
-    private void Apply(bool isOn)
+    private void ApplyLocal()
     {
         // The server has the last word once it has spoken.
         if (_serverDriven)
             return;
 
-        bool redLit = _invertColors ? !isOn : isOn;
+        bool redLit = _invertColors ? !_localLit : _localLit;
         ApplyLamps(redLit, !redLit);
     }
 

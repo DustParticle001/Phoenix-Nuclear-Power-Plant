@@ -9,21 +9,21 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1ebc24f3bb18c3c4db9dc7baebe74d49, type: 3}
+  m_Script: {fileID: 11500000, guid: 979ee3dcefc37584999af2235489be57, type: 3}
   m_Name: A Bank Position
-  m_EditorClassIdentifier: Assembly-CSharp::GaugeDefinition
+  m_EditorClassIdentifier: Assembly-CSharp::BarGaugeDefinition
   _id: f150eb78-4511-44bf-8247-a8a5742f62a0
   displayName: 
   minValue: 0
   maxValue: 228
-  units: STEPS
+  units: 
   majorTickInterval: 57
   minorTicksPerMajor: 4
   labelFormat: 0
   labelMultiplier: 1
-  startAngle: -135
-  endAngle: 135
-  needleResponse: 0.15
+  startAngle: 29.738802
+  endAngle: -29.738802
+  needleResponse: 0.02
   bands: []
   faceColor: {r: 0.93, g: 0.93, b: 0.9, a: 1}
   markingColor: {r: 0, g: 0, b: 0, a: 1}
@@ -39,9 +39,28 @@ MonoBehaviour:
   bandOuterRadius: 0.965
   bandInnerRadius: 0.905
   drawDisplayName: 1
-  bakeResolution: 1024
-  bakeRotation: 3
-  materialTiling: {x: 0.15, y: 0.15}
-  materialOffset: {x: 0.5, y: 0.5}
+  bakeResolution: 2048
+  bakeRotation: 0
+  materialTiling: {x: -0.23809525, y: -0.04722662}
+  materialOffset: {x: -0.095238104, y: 1.0137997}
   bakedFace: {fileID: 2800000, guid: e5b40a705b3bd054289c392368e17ef0, type: 3}
   bakedFaceMaterial: {fileID: 2100000, guid: 4dfbf9b84846de34ea8b5c4602dceb00, type: 2}
+  faceUvMin: {x: -4.6, y: 0.2922}
+  faceUvMax: {x: -0.4, y: 21.4667}
+  flipU: 1
+  flipV: 1
+  faceAspect: 4.887
+  faceArcDegrees: 69.16
+  scaleTop: 0.07
+  scaleBottom: 0.93
+  tickEdge: 0.25
+  barMajorTickLength: 0.22
+  barMinorTickLength: 0.12
+  barMajorTickWidth: 0.022
+  barMinorTickWidth: 0.011
+  spineWidth: 0.015
+  labelCenter: 0.72
+  barLabelSize: 0.2
+  barTextSize: 0.17
+  bandLeft: 0.25
+  bandWidth: 0.1

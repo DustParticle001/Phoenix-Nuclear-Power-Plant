@@ -12,7 +12,7 @@ using UnityEngine;
 // places the button where it belongs and this only ever pushes it in from
 // there. Travel is set as a direction plus a depth rather than a second
 // position, so it can be tuned with one number in play mode.
-public class Trans2p : MonoBehaviour, ISwitchControl, IInteractable
+public class Trans2p : MonoBehaviour, ITwoPositionControl, IInteractable
 {
     // Position names the server knows this button by; order matches IsPressed.
     private static readonly string[] _positionNames = { "released", "pressed" };
@@ -27,6 +27,7 @@ public class Trans2p : MonoBehaviour, ISwitchControl, IInteractable
     [Header("Parts")]
     [Tooltip("The cap - the part that travels. Same field as a switch's handle.")]
     [SerializeField] private Transform _handle;
+    public Transform Handle => _handle;
 
     [Header("State")]
     [Tooltip("State the button starts in on scene load.")]
@@ -46,6 +47,8 @@ public class Trans2p : MonoBehaviour, ISwitchControl, IInteractable
     private Vector3 _targetPosition;
 
     public bool IsPressed { get; private set; }
+
+    bool ITwoPositionControl.IsOn => IsPressed;
 
     public event System.Action<bool> OnStateChanged;
 

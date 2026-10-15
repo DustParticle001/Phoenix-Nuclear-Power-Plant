@@ -63,7 +63,9 @@ public class InteractionManager : MonoBehaviour
         if (!Physics.Raycast(ray, out RaycastHit hit, _maxDistance, _interactableLayer))
             return;
 
-        var control = hit.collider.GetComponentInParent<IInteractable>();
+        // Not GetComponentInParent: one object can carry several controllers - a
+        // station of buttons - and that would press the first whichever was hit.
+        var control = ControlSelection.Pick<IInteractable>(hit.collider.transform, hit.point);
         if (control == null)
             return;
 

@@ -255,8 +255,8 @@
     },
     {
       "uid": "a05647e9-c7b0-4a43-8209-eac5a3719b7e",
-      "id": "RPS A Close",
-      "name": "RPS A Close",
+      "id": "RPS Reset",
+      "name": "RPS Reset",
       "positions": [
         "released",
         "pressed"
@@ -269,18 +269,6 @@
       "uid": "f0541f68-6757-4d71-a5ad-e9f5563b288b",
       "id": "RPS B Trip",
       "name": "RPS B Trip",
-      "positions": [
-        "released",
-        "pressed"
-      ],
-      "position": "released",
-      "powered": true,
-      "available": true
-    },
-    {
-      "uid": "63388349-c123-433e-bd00-be525a84f918",
-      "id": "RPS B Close",
-      "name": "RPS B Close",
       "positions": [
         "released",
         "pressed"

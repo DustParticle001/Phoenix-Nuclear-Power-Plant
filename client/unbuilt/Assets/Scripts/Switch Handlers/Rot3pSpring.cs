@@ -30,6 +30,7 @@ public class Rot3pSpring : MonoBehaviour, ISwitchControl, IHoldInteractable
 
     [Header("Parts")]
     [SerializeField] private Transform _handle;
+    public Transform Handle => _handle;
 
     [Header("Interaction")]
     [SerializeField] private SplitAxis _splitAxis = SplitAxis.X;
@@ -140,7 +141,7 @@ public class Rot3pSpring : MonoBehaviour, ISwitchControl, IHoldInteractable
 
         // Test in the switch body's frame, not the handle's — the handle
         // rotates, which would tilt the left/right split plane with it.
-        Vector3 localHit = transform.InverseTransformPoint(worldHitPoint);
+        Vector3 localHit = ControlSelection.LocalHit(this, _handle, worldHitPoint);
 
         float value = _splitAxis switch
         {

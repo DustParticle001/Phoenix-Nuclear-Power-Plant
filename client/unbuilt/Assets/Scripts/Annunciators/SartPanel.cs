@@ -5,7 +5,9 @@ using UnityEngine;
 // the panel prefab and type in the SART group it commands. That is all of it.
 //
 // The four buttons are found by GameObject name and named from the group, so
-// they need no definition assets of their own:
+// they need no definition assets of their own. A station modelled as one object
+// with all four controllers on it works too: then it is each button's handle
+// (cap) that carries the name - see ControlSelection.NameOf.
 //
 //     Sart Group "RCP P1"  ->  "RCP P1 Silence", "RCP P1 Acknowledge",
 //                              "RCP P1 Reset",   "RCP P1 Test"
@@ -70,7 +72,7 @@ public class SartPanel : MonoBehaviour, IControlIdSource
         if (control == null)
             return null;
 
-        string action = ActionOf(control.name);
+        string action = ActionOf(ControlSelection.NameOf(control));
 
         // Something else parented under the panel - a lamp, a label, a switch
         // that isn't one of the four. Not ours to name.
@@ -91,7 +93,7 @@ public class SartPanel : MonoBehaviour, IControlIdSource
             if (!(control is MonoBehaviour behaviour))
                 continue;
 
-            string action = ActionOf(behaviour.name);
+            string action = ActionOf(ControlSelection.NameOf(behaviour));
             if (action == null)
                 continue;
 
@@ -99,12 +101,12 @@ public class SartPanel : MonoBehaviour, IControlIdSource
             {
                 Debug.LogWarning(
                     $"[SartPanel] '{name}' has two {action} buttons ('{first}' and " +
-                    $"'{behaviour.name}'). They report one uid, so IoSync keeps the first " +
+                    $"'{ControlSelection.NameOf(behaviour)}'). They report one uid, so IoSync keeps the first " +
                     "and the other does nothing.", this);
                 continue;
             }
 
-            seen[action] = behaviour.name;
+            seen[action] = ControlSelection.NameOf(behaviour);
 
             if (control.Definition != null)
                 Debug.Log($"[SartPanel] '{name}' leaves {action} to its own definition " +

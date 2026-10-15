@@ -65,6 +65,7 @@ from rod_sim import (AUTOMATIC, AUTO_BLOCK_LOAD_PCT, AUTO_MAX_STEPS_PER_MIN,
                      BORON_NOMINAL_PCT, BORON_WORTH_PCM_PER_PCT, CVCS_BORATE,
                      CVCS_DILUTE, CVCS_HOLD, CVCS_RATE_PCT_PER_SEC,
                      CVCS_SWITCH, POWER_DEFECT_PCM, PRESSED, RPS_RESET,
+                     RPS_STATE, RPS_STATE_NORMAL, RPS_STATE_TRIPPED,
                      RPS_TRAINS, RPS_TRIP, RodCore, RodSimulation)
 from turbine_sim import GEN_LOAD, RATED_LOAD_MW
 
@@ -103,7 +104,7 @@ def fresh(selects=MANUAL, power=None):
     state.set_switch(CVCS_SWITCH, position=CVCS_HOLD)
     for train in RPS_TRAINS:
         state.set_switch(RPS_TRIP[train], position="released")
-        state.set_switch(RPS_RESET[train], position="released")
+    state.set_switch(RPS_RESET, position="released")
     state.set_gauge(GEN_LOAD, 0.0)
     if power is not None:
         core.power = power
@@ -520,17 +521,22 @@ check("and one open breaker is a trip", core.tripped, True)
 run(core, ROD_DROP_SECONDS + 0.5, dt=0.05)
 check("every bank on the bottom", sorted(set(core.banks.values())), [0])
 
-press(core, RPS_RESET["B"])
-check("B's reset does nothing to A", core.rps_closed, {"A": False, "B": True})
-press(core, RPS_RESET["A"])
-check("A's reset closes A", core.rps_closed, {"A": True, "B": True})
+press(core, RPS_RESET)
+check("the reset closes A", core.rps_closed, {"A": True, "B": True})
 check("and the reactor is back", core.tripped, False)
 
 press(core, RPS_TRIP["B"])
 check("B's button opens B", core.rps_closed, {"A": True, "B": False})
 check("which is equally a trip", core.tripped, True)
-press(core, RPS_RESET["B"])
-check("and resets", core.rps_closed, {"A": True, "B": True})
+press(core, RPS_RESET)
+check("and the same reset closes B", core.rps_closed, {"A": True, "B": True})
+
+press(core, RPS_TRIP["A"])
+press(core, RPS_TRIP["B"])
+check("both trips open both", core.rps_closed, {"A": False, "B": False})
+press(core, RPS_RESET)
+check("and one press of the reset closes both", core.rps_closed,
+      {"A": True, "B": True})
 
 print("\nA breaker will not reset into high flux")
 core = fresh()
@@ -538,11 +544,11 @@ park_all_out(core)
 core.power = 50.0
 press(core, RPS_TRIP["A"])
 core.power = HIGH_FLUX_TRIP_PCT + 1.0
-press(core, RPS_RESET["A"])
+press(core, RPS_RESET)
 check("refused while the flux that would trip it is still there",
       core.rps_closed["A"], False)
 core.power = 1.0
-press(core, RPS_RESET["A"])
+press(core, RPS_RESET)
 check("and taken once it is down", core.rps_closed["A"], True)
 
 print("\nA button held down is still one command")
@@ -551,9 +557,35 @@ park_all_out(core)
 core.power = 50.0
 state.set_switch(RPS_TRIP["A"], position=PRESSED)
 run(core, 5.0, dt=0.02)
-press(core, RPS_RESET["A"])       # reset with the trip button still down
+press(core, RPS_RESET)       # reset with the trip button still down
 check("the held trip button did not re-open it", core.rps_closed["A"], True)
 state.set_switch(RPS_TRIP["A"], position="released")
+
+print("\nThe state lamps follow the breakers")
+core = fresh()
+park_all_out(core)
+core.power = 50.0
+sim = RodSimulation()
+sim.core = core
+
+
+def lamps():
+    sim._publish()
+    return {train: state.get_indicator(RPS_STATE[train])["state"]
+            for train in RPS_TRAINS}
+
+
+check("dark while both are closed", lamps(),
+      {"A": RPS_STATE_NORMAL, "B": RPS_STATE_NORMAL})
+press(core, RPS_TRIP["A"])
+check("A's trip lights A's lamp only", lamps(),
+      {"A": RPS_STATE_TRIPPED, "B": RPS_STATE_NORMAL})
+press(core, RPS_TRIP["B"])
+check("B's trip lights B's", lamps(),
+      {"A": RPS_STATE_TRIPPED, "B": RPS_STATE_TRIPPED})
+press(core, RPS_RESET)
+check("the reset puts both out", lamps(),
+      {"A": RPS_STATE_NORMAL, "B": RPS_STATE_NORMAL})
 
 
 # -------------------------------------------------------- reactivity balance
@@ -702,7 +734,8 @@ else:
          ("Boric Acid", BORIC_ACID)]
         + [(BANK_GAUGE_NAMES[bank], BANK_GAUGES[bank]) for bank in BANKS]
         + [(f"RPS {train} Trip", RPS_TRIP[train]) for train in RPS_TRAINS]
-        + [(f"RPS {train} Close", RPS_RESET[train]) for train in RPS_TRAINS])
+        + [(f"RPS {train} State", RPS_STATE[train]) for train in RPS_TRAINS]
+        + [("RPS Reset", RPS_RESET)])
 
     for name, uid in wanted.items():
         check(f"{name}.asset carries the uid rod_sim.py uses",

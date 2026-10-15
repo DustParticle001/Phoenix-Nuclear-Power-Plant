@@ -4,7 +4,9 @@ using UnityEngine;
 // What InteractionManager needs from anything the player can click, so the
 // raycast doesn't have to know every controller class by name. Put it on the
 // component that sits on the model root (the same one that carries
-// ISwitchControl), not on the moving part.
+// ISwitchControl), not on the moving part. Several on one root is fine - a
+// device with more than one button - as long as each has its own handle; see
+// ControlSelection.
 public interface IInteractable
 {
     // Clicked. The world point the ray hit, so a control with sides can work
